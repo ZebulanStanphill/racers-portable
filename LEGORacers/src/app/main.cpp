@@ -20,6 +20,7 @@
 
 #include <miniwin/miniwinapp.h>
 #include <miniwin/touch.h>
+#include <miniwin/uwp.h>
 #include <objbase.h>
 #include <stdlib.h>
 #include <string.h>
@@ -152,6 +153,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 	// Portable arguments are consumed here; everything else is passed through to
 	// LegoRacers::ParseArguments untouched.
 	bool rendererFromCli = false;
+	bool pathFromCli = false;
 	g_commandLine[0] = '\0';
 	for (int i = 1; i < argc; i++) {
 		if (SDL_strcmp(argv[i], "--help") == 0) {
@@ -210,6 +212,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 #endif
 		}
 		if (SDL_strcmp(argv[i], "--path") == 0 && i + 1 < argc) {
+			pathFromCli = true;
 #if defined(__EMSCRIPTEN__)
 			// Web data lives at a fixed mount (/racers), resolved by basename regardless of cwd;
 			// nothing to chdir into, so ignore it.
@@ -230,6 +233,15 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 		}
 		SDL_strlcat(g_commandLine, argv[i], sizeof(g_commandLine));
 	}
+
+#ifdef WINDOWS_STORE
+	// [library:filesystem] A UWP app gets no command line, so without --path look for the
+	// game files in the Xbox's known places. If they aren't there, don't start the game:
+	// SDL_AppIterate tells the player, then quits.
+	if (!pathFromCli && !MiniwinUwp_EnterGameDataDirectory()) {
+		return SDL_APP_CONTINUE;
+	}
+#endif
 
 #ifdef __EMSCRIPTEN__
 	// The browser cannot be forced into true fullscreen without a user gesture, and the game
@@ -493,6 +505,13 @@ static void PumpAutoTouch()
 
 SDL_AppResult SDL_AppIterate(void* appstate)
 {
+#ifdef WINDOWS_STORE
+	// [library:filesystem] Without the game files, the game wasn't started.
+	if (MiniwinUwp_IsGameDataMissing()) {
+		return MiniwinUwp_ReportMissingGameData();
+	}
+#endif
+
 	if (SDL_GetAtomicInt(&g_gameThreadDone)) {
 		return SDL_APP_SUCCESS;
 	}

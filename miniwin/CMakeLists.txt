@@ -29,6 +29,11 @@ add_library(miniwin STATIC
   src/dinput/touch.cpp
 )
 
+# Xbox (UWP) app support: finding the game files without a command line.
+if(WINDOWS_STORE)
+  target_sources(miniwin PRIVATE src/windows/uwpdatadir.cpp)
+endif()
+
 # Render backends are selected at build time per platform, mirroring isle-portable:
 # each entry becomes a USE_* compile definition, and the matching source is compiled
 # only when its entry is present.

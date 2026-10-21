@@ -68,6 +68,17 @@ The build applies our fixes to SDL3-uwp from [patches/](patches/): `sdl3-uwp-con
 
 Every build is signed with the same certificate (`packaging/UWP/RacersPortable.pfx`), and each CI build has a higher version than the one before (`0.1.<run number>.0`), so installing a newer build updates the app in place and keeps its saved data. Windows won't install an older build over a newer one: uninstall the app first to go back.
 
+### Game files and saves
+
+The Xbox app gets no command line, so it looks for the game files in two folders and uses the first one that has `LEGO.JAM`:
+
+1. `E:\racers\`: a USB drive plugged into the Xbox and formatted for *media* (not apps/games) shows up as `E:\`, and apps can read and write it. Create a `racers` folder at the root of the drive.
+2. `D:\DevelopmentFiles\racers\`: Dev Mode's development files folder, which a PC can reach over the network (SMB) or through the Device Portal's file explorer.
+
+Copy the files of an installed copy of LEGO Racers into that folder: `LEGO.JAM`, the `*.TUN` music files and the intro `*.AVI` movies (so you have e.g. `E:\racers\LEGO.JAM`). If neither folder has them, the game says so and quits.
+
+Saved games and the renderer choice aren't kept with the game files but in the app's own storage, `LocalState\isledecomp\racers\` (in the Device Portal's file explorer: LocalAppData, then the app's package). Updating the app keeps them; uninstalling it deletes them.
+
 ### Building
 
 The Xbox build needs Windows and Visual Studio 2026 with the C++ Universal Windows Platform tools (part of the Windows application development workload) and the Windows SDK 10.0.26100.0. Configure with the Visual Studio generator and the `WindowsStore` system name:
