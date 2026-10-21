@@ -116,6 +116,18 @@ if (DOWNLOAD_DEPENDENCIES)
   else()
     set(RACERS_SDL3_GIT_SHALLOW TRUE)
   endif()
+  set(RACERS_SDL3_PATCH_ARGS)
+  if (WINDOWS_STORE)
+    # Our fixes to SDL3-uwp, in patches/. The clone keeps LF line endings so that
+    # they apply on Windows too.
+    find_package(Git REQUIRED)
+    set(RACERS_SDL3_PATCH_ARGS
+      GIT_CONFIG core.autocrlf=false core.eol=lf
+      PATCH_COMMAND "${CMAKE_COMMAND}" "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        "-DPATCH_FILE=${CMAKE_SOURCE_DIR}/patches/sdl3-uwp-controller-duplicates.patch"
+        -P "${CMAKE_SOURCE_DIR}/patches/apply-patch.cmake"
+    )
+  endif()
   set(SDL_TEST_LIBRARY OFF)
   set(SDL_TESTS OFF)
   set(SDL_EXAMPLES OFF)
@@ -124,6 +136,7 @@ if (DOWNLOAD_DEPENDENCIES)
     GIT_REPOSITORY "${RACERS_SDL3_GIT_REPO}"
     GIT_TAG "${RACERS_SDL3_GIT_TAG}"
     GIT_SHALLOW ${RACERS_SDL3_GIT_SHALLOW}
+    ${RACERS_SDL3_PATCH_ARGS}
   )
   FetchContent_MakeAvailable(SDL3)
 else()

@@ -1,0 +1,66 @@
+From f306732ef854af8cccd5df780e6d2709157e02d7 Mon Sep 17 00:00:00 2001
+From: Zebulan Stanphill <zebulanstanphill@protonmail.com>
+Date: Tue, 20 Oct 2026 22:35:07 -0500
+Subject: [PATCH] UWP: Don't add a controller twice when it's reported twice
+
+WGI_JoystickInit() subscribes to RawGameControllerAdded and then adds
+the controllers that are already connected, but the event can also be
+raised for those, so InvokeAdded() now skips controllers it has already
+added, as Microsoft's Windows.Gaming.Input Gamepad sample does. On Xbox,
+running as a game instead of an app made every controller show up twice,
+and each press counted twice.
+
+Ported from the SDL2 patch in ZebulanStanphill/ringracers-uwp
+(patches/sdl-controller-duplicates.patch). Only the SDL3 spellings
+changed: bool/true/false and // comments. libsdl-org/SDL main
+(d0183f0ee) has no equivalent check, so there is no upstream commit to
+base this on.
+
+Agent: Claude Code (design and review)
+Model: claude-opus-5-5
+
+Agent: Claude Code (SDL patch port)
+Model: claude-sonnet-5-5
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+---
+ src/joystick/windows/SDL_windows_gaming_input.c | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/src/joystick/windows/SDL_windows_gaming_input.c b/src/joystick/windows/SDL_windows_gaming_input.c
+index 2288fe5bc..c89ec63cc 100644
+--- a/src/joystick/windows/SDL_windows_gaming_input.c
++++ b/src/joystick/windows/SDL_windows_gaming_input.c
+@@ -390,6 +390,21 @@ static int GetSteamVirtualGamepadSlot(__x_ABI_CWindows_CGaming_CInput_CIRawGameC
+     return slot;
+ }
+ 
++// RawGameControllerAdded can also be raised for controllers that were already connected when the handler
++// was added, which WGI_JoystickInit() adds from RawGameControllers too. On Xbox, this made each controller
++// show up twice when running as a game instead of an app.
++static bool WGI_IsControllerAdded(__x_ABI_CWindows_CGaming_CInput_CIRawGameController *controller)
++{
++    int i;
++
++    for (i = 0; i < wgi.controller_count; i++) {
++        if (wgi.controllers[i].controller == controller) {
++            return true;
++        }
++    }
++    return false;
++}
++
+ static HRESULT STDMETHODCALLTYPE IEventHandler_CRawGameControllerVtbl_InvokeAdded(__FIEventHandler_1_Windows__CGaming__CInput__CRawGameController *This, IInspectable *sender, __x_ABI_CWindows_CGaming_CInput_CIRawGameController *e)
+ {
+     HRESULT hr;
+@@ -413,7 +428,7 @@ static HRESULT STDMETHODCALLTYPE IEventHandler_CRawGameControllerVtbl_InvokeAdde
+         SDL_JoystickType type = SDL_JOYSTICK_TYPE_UNKNOWN;
+         __x_ABI_CWindows_CGaming_CInput_CIRawGameController2 *controller2 = NULL;
+         __x_ABI_CWindows_CGaming_CInput_CIGameController *game_controller = NULL;
+-        bool ignore_joystick = false;
++        bool ignore_joystick = WGI_IsControllerAdded(controller);
+ 
+         __x_ABI_CWindows_CGaming_CInput_CIRawGameController_get_HardwareVendorId(controller, &vendor);
+         __x_ABI_CWindows_CGaming_CInput_CIRawGameController_get_HardwareProductId(controller, &product);
+-- 
+2.50.1 (Apple Git-155)
+
