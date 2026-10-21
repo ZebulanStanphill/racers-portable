@@ -37,7 +37,7 @@ void vert_main()
     float w = 1.0f / aPos.w;
     float x = (((aPos.x * 2.0f) / _28_uViewport.x) - 1.0f) * w;
     float y = (1.0f - ((aPos.y * 2.0f) / _28_uViewport.y)) * w;
-    float z = ((aPos.z * 2.0f) - 1.0f) * w;
+    float z = aPos.z * w;
     gl_Position = float4(x, y, z, w);
     vColor = aColor.zyxw;
     vSpecular = aSpecular.zyxw;
