@@ -60,11 +60,11 @@ This fork builds LEGO Racers as a UWP app for the Xbox One and Xbox Series X|S, 
 
 ### Installing
 
-1. Download the `legoracers-Xbox One` artifact from a run of the [CI workflow](https://github.com/ZebulanStanphill/racers-portable/actions/workflows/ci.yml) and unzip it. It contains the app package (`legoracers_<version>_x64.msix`), the certificate it is signed with (`.cer`), and `Dependencies/x64/Microsoft.VCLibs.x64.14.00.appx`, the Visual C++ runtime the app needs.
+1. Download the `legoracers-Xbox One` artifact from a run of the [CI workflow](https://github.com/ZebulanStanphill/racers-portable/actions/workflows/ci.yml) and unzip it. Its `legoracers/legoracers_<version>_x64_Test/` folder contains the app package (`legoracers_<version>_x64.msix`), the certificate it is signed with (`.cer`), and `Dependencies/x64/Microsoft.VCLibs.x64.14.00.appx`, the Visual C++ runtime the app needs.
 2. On the Xbox, open Dev Home and turn on Xbox Device Portal (under Remote Access), then open its address in a browser on your computer.
-3. Under **Home** → **My games & apps**, select **Add**, choose the `.msix` file and select **Next**. Add `Microsoft.VCLibs.x64.14.00.appx` as a dependency, then select **Start** to install.
+3. Under **Home** → **My games & apps**, select **Add**, choose the `.msix` file and select **Next**. Add `Microsoft.VCLibs.x64.14.00.appx` as a dependency (and the `.cer`, if Device Portal asks for a certificate), then select **Start** to install.
 
-Every build is signed with the same certificate (`packaging/UWP/RacersPortable.pfx`), so installing a newer build updates the app in place and keeps its saved data.
+Every build is signed with the same certificate (`packaging/UWP/RacersPortable.pfx`), and each CI build has a higher version than the one before (`0.1.<run number>.0`), so installing a newer build updates the app in place and keeps its saved data. Windows won't install an older build over a newer one: uninstall the app first to go back.
 
 ### Building
 
@@ -75,7 +75,7 @@ cmake -S . -B build-uwp -G "Visual Studio 18 2026" -A x64 -DCMAKE_SYSTEM_NAME=Wi
 cmake --build build-uwp --config Release
 ```
 
-The build writes the signed package and its dependencies to `build-uwp/AppPackages/legoracers/legoracers_<version>_x64_Test/`.
+The build writes the signed package and its dependencies to `build-uwp/AppPackages/legoracers/legoracers_<version>_x64_Test/`. Local builds have version 0.1.0.0, so they don't install over a CI build without uninstalling it first.
 
 ## Contributing
 

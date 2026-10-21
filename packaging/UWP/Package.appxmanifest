@@ -6,7 +6,8 @@
   xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
   IgnorableNamespaces="uap mp uap5 rescap">
-  <Identity Name="org.isledecomp.racers" Publisher="CN=Racers Portable" Version="0.1.0.0" />
+  <!-- The build fills in the version; see CMakeLists.txt. -->
+  <Identity Name="org.isledecomp.racers" Publisher="CN=Racers Portable" Version="@UWP_PACKAGE_VERSION@" />
   <!-- MSBuild requires this, even for apps that never run on a phone. -->
   <mp:PhoneIdentity PhoneProductId="85C3DBBB-3FEC-4073-A69B-8F8FE3B32B7D" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
