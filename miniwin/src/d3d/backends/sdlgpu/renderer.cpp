@@ -16,6 +16,13 @@
 #include "renderbackend.h"
 #include "shaders/generated/miniwin_sdlgpu_shaders.h"
 
+#ifdef MINIWIN_SDLGPU_DXBC
+// UWP: Shader Model 5.0 DXBC for SDL_GPU's Direct3D 11 driver, compiled by fxc at build
+// time from shaders/generated/d3d11/ (see miniwin/CMakeLists.txt).
+#include "scene_frag_dxbc.h"
+#include "scene_vert_dxbc.h"
+#endif
+
 #include <miniwin/miniwinapp.h>
 #include <unordered_map>
 #include <vector>
@@ -194,6 +201,9 @@ SDL_GPUShaderFormat AvailableShaderFormats()
 	if (g_scene_vert_dxil_len) {
 		formats |= SDL_GPU_SHADERFORMAT_DXIL;
 	}
+#ifdef MINIWIN_SDLGPU_DXBC
+	formats |= SDL_GPU_SHADERFORMAT_DXBC;
+#endif
 	return formats;
 }
 
@@ -382,6 +392,16 @@ SDL_GPUShader* MiniwinSdlGpuBackend::LoadShader(SDL_GPUShaderStage p_stage)
 			&info
 		);
 	}
+#ifdef MINIWIN_SDLGPU_DXBC
+	if (!ok && (SDL_GetGPUShaderFormats(m_device) & SDL_GPU_SHADERFORMAT_DXBC)) {
+		bool vertex = p_stage == SDL_GPU_SHADERSTAGE_VERTEX;
+		info.format = SDL_GPU_SHADERFORMAT_DXBC;
+		info.code = vertex ? g_scene_vert_dxbc : g_scene_frag_dxbc;
+		info.code_size = vertex ? sizeof(g_scene_vert_dxbc) : sizeof(g_scene_frag_dxbc);
+		info.entrypoint = "main";
+		ok = true;
+	}
+#endif
 	if (!ok) {
 		SDL_LogError(LOG_CATEGORY_MINIWIN, "no shader blob for the device's format");
 		return nullptr;

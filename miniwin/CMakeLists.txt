@@ -93,7 +93,8 @@ target_link_libraries(miniwin PRIVATE SDL3::SDL3 miniaudio)
 # src/d3d/backends/sdlgpu/shaders/generated/miniwin_sdlgpu_shaders.h is what the build
 # compiles; this target refreshes it from the GLSL sources when glslang + SDL_shadercross
 # are on PATH. DXIL (D3D12) needs a DXC-enabled shadercross, which has no macOS prebuilt,
-# so it is filled in by a Linux CI job; SPIR-V + MSL are produced everywhere.
+# so it is filled in by a Linux CI job; SPIR-V + MSL are produced everywhere. It also
+# refreshes the Direct3D 11 HLSL in generated/d3d11/ (see the UWP block below).
 if(USE_SDL_GPU IN_LIST GRAPHICS_BACKENDS)
   find_program(RACERS_GLSLANG_BIN NAMES glslangValidator glslang)
   find_program(RACERS_SHADERCROSS_BIN NAMES shadercross)
@@ -108,4 +109,53 @@ if(USE_SDL_GPU IN_LIST GRAPHICS_BACKENDS)
       VERBATIM
     )
   endif()
+endif()
+
+# Direct3D 11 shaders for UWP. SDL3-uwp's only SDL_GPU driver there is Direct3D 11, which
+# takes Shader Model 5.0 DXBC. Only Microsoft's FXC makes DXBC, and it runs only on
+# Windows, so rather than committing blobs (the shader regeneration job runs on Linux)
+# this compiles the generator's HLSL in src/d3d/backends/sdlgpu/shaders/generated/d3d11/
+# with the Windows SDK's fxc.exe. No other build gets DXBC: desktop Windows's D3D12
+# driver also accepts DXBC, but it must keep using DXIL.
+if(WINDOWS_STORE AND USE_SDL_GPU IN_LIST GRAPHICS_BACKENDS)
+  # fxc.exe is on PATH in a Visual Studio developer prompt; otherwise look in the Windows
+  # Kits 10 bin directory of the SDK being built against.
+  cmake_host_system_information(RESULT _kits_root
+    QUERY WINDOWS_REGISTRY "HKLM/SOFTWARE/Microsoft/Windows Kits/Installed Roots" VALUE KitsRoot10)
+  if(NOT _kits_root)
+    set(_kits_root "$ENV{ProgramFiles\(x86\)}/Windows Kits/10")
+  endif()
+  file(TO_CMAKE_PATH "${_kits_root}" _kits_root)
+  set(_fxc_hints)
+  foreach(_sdk_version IN ITEMS ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} ${CMAKE_SYSTEM_VERSION})
+    list(APPEND _fxc_hints "${_kits_root}/bin/${_sdk_version}/x64" "${_kits_root}/bin/${_sdk_version}/x86")
+  endforeach()
+  find_program(RACERS_FXC_BIN NAMES fxc HINTS ${_fxc_hints})
+  if(NOT RACERS_FXC_BIN)
+    message(FATAL_ERROR
+      "fxc.exe was not found. The UWP build needs it (from the Windows SDK) to compile its "
+      "Direct3D 11 shaders. Install the Windows SDK, run CMake from a Visual Studio "
+      "developer prompt, or set RACERS_FXC_BIN to fxc.exe's path.")
+  endif()
+
+  set(_d3d11_hlsl_dir "${CMAKE_CURRENT_SOURCE_DIR}/src/d3d/backends/sdlgpu/shaders/generated/d3d11")
+  set(_dxbc_dir "${CMAKE_CURRENT_BINARY_DIR}/sdlgpu_dxbc")
+  file(MAKE_DIRECTORY "${_dxbc_dir}")
+  # Each header declares `const BYTE g_scene_<stage>_dxbc[]` (entry point "main").
+  foreach(_shader IN ITEMS "vert;vs_5_0" "frag;ps_5_0")
+    list(GET _shader 0 _stage)
+    list(GET _shader 1 _profile)
+    set(_hlsl "${_d3d11_hlsl_dir}/scene.${_stage}.hlsl")
+    set(_dxbc_header "${_dxbc_dir}/scene_${_stage}_dxbc.h")
+    add_custom_command(OUTPUT "${_dxbc_header}"
+      COMMAND "${RACERS_FXC_BIN}" /nologo /T ${_profile} /E main /Vn g_scene_${_stage}_dxbc
+        /Fh "${_dxbc_header}" "${_hlsl}"
+      DEPENDS "${_hlsl}"
+      COMMENT "Compiling scene.${_stage}.hlsl to Shader Model 5.0 DXBC"
+      VERBATIM
+    )
+    target_sources(miniwin PRIVATE "${_dxbc_header}")
+  endforeach()
+  target_include_directories(miniwin PRIVATE "${_dxbc_dir}")
+  target_compile_definitions(miniwin PRIVATE MINIWIN_SDLGPU_DXBC)
 endif()

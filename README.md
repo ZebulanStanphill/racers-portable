@@ -92,6 +92,8 @@ cmake --build build-uwp --config Release
 
 The build writes the signed package and its dependencies to `build-uwp/AppPackages/legoracers/legoracers_<version>_x64_Test/`. Local builds have version 0.1.0.0, so they don't install over a CI build without uninstalling it first.
 
+On the Xbox the game renders with SDL_GPU's Direct3D 11 driver, the only one SDL3-uwp has there. Its shaders are compiled during the build with the Windows SDK's `fxc.exe`, which CMake finds on `PATH` or in the SDK's `bin` directory (or set `RACERS_FXC_BIN` to its path).
+
 ## Contributing
 
 If you're interested in helping or contributing to this project, check out the [CONTRIBUTING](/CONTRIBUTING.md) page.
