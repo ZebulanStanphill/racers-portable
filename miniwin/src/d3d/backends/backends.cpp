@@ -567,9 +567,10 @@ void MiniwinBackend_Relaunch(MiniwinBackendId p_backend)
 	// game's already-persisted state is what carries over.
 	char** argv = args.data();
 	MiniwinApp_RunOnMainThread([&exe, argv]() {
-#if defined(__EMSCRIPTEN__)
-		// No process re-exec in the browser; only one backend is compiled so this path is
-		// unreachable. A future software renderer would reload the page instead.
+#if defined(__EMSCRIPTEN__) || defined(WINDOWS_STORE)
+		// No process re-exec in the browser or a UWP app (no _exec*); only one backend is
+		// compiled there so this path is unreachable. A future software renderer would reload
+		// the page instead on the web.
 		(void) exe;
 		(void) argv;
 #elif defined(_WIN32)

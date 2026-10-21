@@ -2,6 +2,14 @@ cmake_minimum_required(VERSION 3.25...4.2 FATAL_ERROR)
 
 project(racers-portable LANGUAGES CXX C VERSION 0.1)
 
+# Xbox (UWP): configured with -DCMAKE_SYSTEM_NAME=WindowsStore.
+if (WINDOWS_STORE)
+  add_compile_definitions(WINDOWS_STORE)
+  # The Visual Studio generator's UWP projects turn on /sdl, which makes warnings such
+  # as C4996 (CRT deprecation) and C4146 errors. The desktop MSVC build doesn't use it.
+  add_compile_options(/sdl-)
+endif()
+
 if (EMSCRIPTEN)
   add_compile_options(-pthread -gsource-map)
   add_link_options(
