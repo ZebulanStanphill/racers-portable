@@ -89,6 +89,7 @@ jobs:
           - { name: 'MSVC (x64)', os: 'windows-latest', generator: 'Ninja' , msvc: true, vc-arch: 'amd64' }
           - { name: 'macOS',      os: 'macos-latest',   generator: 'Ninja' , brew: true }
           - { name: 'Emscripten', os: 'ubuntu-latest',  generator: 'Ninja' , emsdk: true, cmake-wrapper: 'emcmake' }
+          - { name: 'Xbox One',   os: 'windows-latest', generator: 'Visual Studio 18 2026', msvc: true, vc-arch: 'amd64', xbox-one: true, cmake-args: '-DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0.26100.0' }
 
     steps:
       - name: Setup vcvars
@@ -98,7 +99,7 @@ jobs:
           arch: ${{ matrix.vc-arch }}
 
       - name: Setup ninja
-        if: ${{ !!matrix.msvc }}
+        if: ${{ !!matrix.msvc && matrix.generator == 'Ninja' }}
         uses: ashutoshvarma/setup-ninja@master
 
       - name: Install Linux dependencies (apt-get)
@@ -133,6 +134,7 @@ jobs:
       - name: Configure (CMake)
         run: |
           ${{ matrix.cmake-wrapper || '' }} cmake -S . -B build -G "${{ matrix.generator }}" \
+            ${{ matrix.cmake-args || '' }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DDOWNLOAD_DEPENDENCIES=ON \
             -Werror=dev
@@ -141,9 +143,40 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Upload artifacts
+        if: ${{ !matrix.xbox-one }}
         uses: actions/upload-artifact@v4
         with:
           name: legoracers-${{ matrix.name }}
           path: |
             build/LEGORacers*
             !build/LEGORacers*.dir
+
+      # MSBuild writes the signed package to AppPackages/<project>/<project>_<version>_x64_Test/.
+      # List what went into it and check the game binaries are there.
+      - name: List package contents (Xbox One)
+        if: ${{ matrix.xbox-one }}
+        shell: pwsh
+        run: |
+          $msix = Get-ChildItem build/AppPackages -Recurse -Filter *.msix | Select-Object -First 1
+          if (-not $msix) { throw "no .msix under build/AppPackages" }
+          Get-ChildItem $msix.Directory -Recurse -File | ForEach-Object { $_.FullName }
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead($msix.FullName)
+          $entries = $zip.Entries | ForEach-Object { $_.FullName }
+          $zip.Dispose()
+          "Contents of $($msix.Name):"
+          $entries
+          foreach ($file in 'LEGORacers.exe', 'GolDP.dll', 'SDL3.dll', 'AppxManifest.xml', 'resources.pri') {
+            if ($entries -notcontains $file) { throw "$file is missing from $($msix.Name)" }
+          }
+
+      - name: Upload artifacts (Xbox One)
+        if: ${{ matrix.xbox-one }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: legoracers-${{ matrix.name }}
+          if-no-files-found: error
+          path: |
+            build/AppPackages/*/*_Test/*.msix
+            build/AppPackages/*/*_Test/*.cer
+            build/AppPackages/*/*_Test/Dependencies/x64/Microsoft.VCLibs.x64*.appx

@@ -54,6 +54,29 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build
 ```
 
+## Xbox (UWP)
+
+This fork builds LEGO Racers as a UWP app for the Xbox One and Xbox Series X|S, the same way [isle-portable](https://github.com/isledecomp/isle-portable) does for LEGO Island: with the [SDL3-uwp](https://github.com/Helloyunho/SDL3-uwp) fork of SDL3, which keeps SDL's UWP support. The app only installs on an Xbox in [Developer Mode](https://learn.microsoft.com/en-us/windows/uwp/xbox-apps/devkit-activation).
+
+### Installing
+
+1. Download the `legoracers-Xbox One` artifact from a run of the [CI workflow](https://github.com/ZebulanStanphill/racers-portable/actions/workflows/ci.yml) and unzip it. It contains the app package (`legoracers_<version>_x64.msix`), the certificate it is signed with (`.cer`), and `Dependencies/x64/Microsoft.VCLibs.x64.14.00.appx`, the Visual C++ runtime the app needs.
+2. On the Xbox, open Dev Home and turn on Xbox Device Portal (under Remote Access), then open its address in a browser on your computer.
+3. Under **Home** → **My games & apps**, select **Add**, choose the `.msix` file and select **Next**. Add `Microsoft.VCLibs.x64.14.00.appx` as a dependency, then select **Start** to install.
+
+Every build is signed with the same certificate (`packaging/UWP/RacersPortable.pfx`), so installing a newer build updates the app in place and keeps its saved data.
+
+### Building
+
+The Xbox build needs Windows and Visual Studio 2026 with the C++ Universal Windows Platform tools (part of the Windows application development workload) and the Windows SDK 10.0.26100.0. Configure with the Visual Studio generator and the `WindowsStore` system name:
+
+```bash
+cmake -S . -B build-uwp -G "Visual Studio 18 2026" -A x64 -DCMAKE_SYSTEM_NAME=WindowsStore -DCMAKE_SYSTEM_VERSION=10.0.26100.0
+cmake --build build-uwp --config Release
+```
+
+The build writes the signed package and its dependencies to `build-uwp/AppPackages/legoracers/legoracers_<version>_x64_Test/`.
+
 ## Contributing
 
 If you're interested in helping or contributing to this project, check out the [CONTRIBUTING](/CONTRIBUTING.md) page.

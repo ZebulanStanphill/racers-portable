@@ -99,8 +99,23 @@ endif()
 
 # --- SDL3 ---
 if (DOWNLOAD_DEPENDENCIES)
-  set(RACERS_SDL3_GIT_REPO "https://github.com/libsdl-org/SDL.git" CACHE STRING "Git repository for SDL3")
-  set(RACERS_SDL3_GIT_TAG "release-3.4.12" CACHE STRING "Git tag for SDL3")
+  if (WINDOWS_STORE)
+    # Upstream SDL 3 dropped UWP; the SDL3-uwp fork (as used by isle-portable) keeps
+    # it, with SDL_GPU's Direct3D 11 driver.
+    set(RACERS_SDL3_DEFAULT_GIT_REPO "https://github.com/Helloyunho/SDL3-uwp.git")
+    set(RACERS_SDL3_DEFAULT_GIT_TAG "3fa5bba61a84a5c96ec37d8c6a82ab645fbc20ce")
+  else()
+    set(RACERS_SDL3_DEFAULT_GIT_REPO "https://github.com/libsdl-org/SDL.git")
+    set(RACERS_SDL3_DEFAULT_GIT_TAG "release-3.4.12")
+  endif()
+  set(RACERS_SDL3_GIT_REPO "${RACERS_SDL3_DEFAULT_GIT_REPO}" CACHE STRING "Git repository for SDL3")
+  set(RACERS_SDL3_GIT_TAG "${RACERS_SDL3_DEFAULT_GIT_TAG}" CACHE STRING "Git tag for SDL3")
+  # A shallow clone needs a branch or tag name; a commit hash needs the full history.
+  if (RACERS_SDL3_GIT_TAG MATCHES "^[0-9a-f]+$")
+    set(RACERS_SDL3_GIT_SHALLOW FALSE)
+  else()
+    set(RACERS_SDL3_GIT_SHALLOW TRUE)
+  endif()
   set(SDL_TEST_LIBRARY OFF)
   set(SDL_TESTS OFF)
   set(SDL_EXAMPLES OFF)
@@ -108,7 +123,7 @@ if (DOWNLOAD_DEPENDENCIES)
     SDL3
     GIT_REPOSITORY "${RACERS_SDL3_GIT_REPO}"
     GIT_TAG "${RACERS_SDL3_GIT_TAG}"
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW ${RACERS_SDL3_GIT_SHALLOW}
   )
   FetchContent_MakeAvailable(SDL3)
 else()
@@ -225,6 +240,11 @@ if (RACERS_BUILD_APP)
     set_property(TARGET legoracers PROPERTY SUFFIX ".html")
     target_link_options(legoracers PRIVATE "SHELL:--shell-file ${CMAKE_SOURCE_DIR}/LEGORacers/emscripten/shell.html")
     set_property(TARGET legoracers APPEND PROPERTY LINK_DEPENDS "${CMAKE_SOURCE_DIR}/LEGORacers/emscripten/shell.html")
+  endif()
+
+  # Xbox (UWP): app manifest, signing key and tile images for the .msix package.
+  if (WINDOWS_STORE)
+    add_subdirectory(packaging/UWP)
   endif()
 endif()
 
