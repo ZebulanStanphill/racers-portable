@@ -128,6 +128,12 @@ static void DisableBrowserFullscreenExit()
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 {
+#ifdef WINDOWS_STORE
+	// [library:config] SDL's log only reaches a debugger on UWP; collect it from the start
+	// for latest-log.txt.
+	MiniwinUwp_StartLog();
+#endif
+
 	// The game thread owns the GL context; without async dispatch, macOS CGL context
 	// updates block the swapping thread until the main thread runs, which shows up as
 	// random multi-hundred-ms frame stalls.
@@ -241,6 +247,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 	if (!pathFromCli && !MiniwinUwp_EnterGameDataDirectory()) {
 		return SDL_APP_CONTINUE;
 	}
+
+	// [library:config] The log file goes beside the game files.
+	MiniwinUwp_OpenLogFile(nullptr);
 #endif
 
 #ifdef __EMSCRIPTEN__
@@ -569,4 +578,10 @@ void SDL_AppQuit(void* appstate, SDL_AppResult result)
 
 	MiniwinBackend_Shutdown();
 	CoUninitialize();
+
+#ifdef WINDOWS_STORE
+	// [library:config] SDL calls this even when SDL_AppInit fails, which can be before
+	// latest-log.txt is created.
+	MiniwinUwp_FlushPendingLog();
+#endif
 }

@@ -68,7 +68,7 @@ The build applies our fixes to SDL3-uwp from [patches/](patches/): `sdl3-uwp-con
 
 Every build is signed with the same certificate (`packaging/UWP/RacersPortable.pfx`), and each CI build has a higher version than the one before (`0.1.<run number>.0`), so installing a newer build updates the app in place and keeps its saved data. Windows won't install an older build over a newer one: uninstall the app first to go back.
 
-### Game files and saves
+### Game files, saves and the log
 
 The Xbox app gets no command line, so it looks for the game files in two folders and uses the first one that has `LEGO.JAM`:
 
@@ -78,6 +78,8 @@ The Xbox app gets no command line, so it looks for the game files in two folders
 Copy the files of an installed copy of LEGO Racers into that folder: `LEGO.JAM`, the `*.TUN` music files and the intro `*.AVI` movies (so you have e.g. `E:\racers\LEGO.JAM`). If neither folder has them, the game says so and quits.
 
 Saved games and the renderer choice aren't kept with the game files but in the app's own storage, `LocalState\isledecomp\racers\` (in the Device Portal's file explorer: LocalAppData, then the app's package). Updating the app keeps them; uninstalling it deletes them.
+
+Each launch writes a log, `latest-log.txt`, next to the game files (e.g. `E:\racers\latest-log.txt`), replacing the previous one. If the game files weren't found, their folder can't be written to, or the game failed before it got to them, the log goes to `LocalState\isledecomp\racers\` instead, and the message about the missing files says where. Include it when reporting a problem.
 
 ### Building
 

@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include <direct.h>
 #include <miniwin/uwp.h>
+#include <miniwin/windows.h>
 
 // Searched in order. A USB drive formatted for media shows up as E:\ and is open to all
 // apps; D:\DevelopmentFiles\ is Dev Mode's own folder, reachable over the network (SMB)
@@ -24,6 +25,7 @@ static const char* const g_gameDataDirectories[] = {
 static const Uint64 c_missingGameDataMessageDelayMs = 2000;
 
 static bool g_gameDataMissing;
+static const char* g_userDataLogPath;
 
 static bool HasGameData(const char* p_directory)
 {
@@ -59,6 +61,11 @@ bool MiniwinUwp_EnterGameDataDirectory()
 
 	SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "LEGO Racers' game files were not found");
 	g_gameDataMissing = true;
+
+	// With no game data directory to keep it in, the log goes with the saved games.
+	char userDataPath[1024];
+	MiniwinGetUserDataPath(userDataPath, sizeof(userDataPath));
+	g_userDataLogPath = MiniwinUwp_OpenLogFile(userDataPath);
 	return false;
 }
 
@@ -76,16 +83,20 @@ SDL_AppResult MiniwinUwp_ReportMissingGameData()
 		return SDL_APP_CONTINUE;
 	}
 
-	if (!SDL_ShowSimpleMessageBox(
-			SDL_MESSAGEBOX_ERROR,
-			"LEGO Racers",
-			"LEGO Racers' game files were not found.\n\n"
-			"Copy the files of an installed copy of LEGO Racers (LEGO.JAM, the .TUN music files and "
-			"the .AVI movies) into one of these folders, then start the game again:\n\n"
-			"E:\\racers\\ (on a USB drive formatted for media)\n"
-			"D:\\DevelopmentFiles\\racers\\ (Dev Mode's development files folder)",
-			nullptr
-		)) {
+	char message[2048];
+	SDL_snprintf(
+		message,
+		sizeof(message),
+		"LEGO Racers' game files were not found.\n\n"
+		"Copy the files of an installed copy of LEGO Racers (LEGO.JAM, the .TUN music files and "
+		"the .AVI movies) into one of these folders, then start the game again:\n\n"
+		"E:\\racers\\ (on a USB drive formatted for media)\n"
+		"D:\\DevelopmentFiles\\racers\\ (Dev Mode's development files folder)"
+		"%s%s",
+		g_userDataLogPath ? "\n\nA log was written to " : "",
+		g_userDataLogPath ? g_userDataLogPath : ""
+	);
+	if (!SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "LEGO Racers", message, nullptr)) {
 		SDL_LogError(
 			SDL_LOG_CATEGORY_APPLICATION,
 			"Cannot show the message about the missing game files: %s",
