@@ -2,6 +2,7 @@
 // and 3D rendering are wired to the render backends (M2).
 
 #include "ddraw_impl.h"
+#include "diagws.h"
 #include "miniwin.h"
 #include "renderbackend.h"
 
@@ -105,6 +106,7 @@ HRESULT MiniwinSurface::Blt(
 	if (dwFlags & DDBLT_COLORFILL) {
 		// Fill of the 3D render target (usually black). Only a full clear is used.
 		if (backend && lpDDBltFx) {
+			MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_SURFACE);
 			backend->ClearScene(nullptr, 0.f, 0.f, 0.f, true, false);
 		}
 		return DD_OK;
@@ -117,6 +119,7 @@ HRESULT MiniwinSurface::Blt(
 		if (source->m_pixelsDirty) {
 			source->CompositeToBackend(backend);
 		}
+		MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_BLT);
 		backend->PresentScene();
 	}
 
@@ -134,6 +137,7 @@ HRESULT MiniwinSurface::Flip(LPDIRECTDRAWSURFACE lpDDSurfaceTargetOverride, DWOR
 		if (m_pixelsDirty) {
 			CompositeToBackend(backend);
 		}
+		MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_FLIP);
 		backend->PresentScene();
 	}
 	return DD_OK;
@@ -193,6 +197,7 @@ void MiniwinSurface::CompositeToBackend(MiniwinRenderBackend* p_backend)
 	state.textureWrap = false;
 	state.colorOp = MiniwinTextureOp::Texture;
 	state.alphaOp = MiniwinTextureOp::Texture;
+	MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_SURFACE);
 	p_backend->SubmitTriangles(state, vertices, 4, indices, 6);
 }
 

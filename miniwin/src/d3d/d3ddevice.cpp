@@ -3,6 +3,7 @@
 // (SDL3 GPU / OpenGL / OpenGL ES) attach here in M2.
 
 #include "ddraw_impl.h"
+#include "diagws.h"
 #include "miniwin.h"
 #include "pointquads.h"
 #include "renderbackend.h"
@@ -107,6 +108,7 @@ struct MiniwinD3DDevice : public IDirect3DDevice3 {
 			vertex.sx += 0.5f;
 			vertex.sy += 0.5f;
 		}
+		MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_DEVICE);
 		backend->SubmitTriangles(p_state, m_vertexScratch.data(), p_vertexCount, p_indices, p_indexCount);
 	}
 
@@ -484,10 +486,12 @@ HRESULT IDirect3DViewport3::Clear(DWORD dwCount, LPD3DRECT lpRects, DWORD dwFlag
 		for (DWORD i = 0; i < dwCount; i++) {
 			SDL_Rect rect =
 				{lpRects[i].x1, lpRects[i].y1, lpRects[i].x2 - lpRects[i].x1, lpRects[i].y2 - lpRects[i].y1};
+			MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_DEVICE);
 			backend->ClearScene(&rect, r, g, b, color, depth);
 		}
 	}
 	else {
+		MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_DEVICE);
 		backend->ClearScene(nullptr, r, g, b, color, depth);
 	}
 	return D3D_OK;

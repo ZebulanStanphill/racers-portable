@@ -27,6 +27,14 @@ public:
 
 	void Resize(int p_width, int p_height) override
 	{
+		SDL_LogInfo(
+			LOG_CATEGORY_MINIWIN,
+			"[diag-ws] d3d11 Resize(logical %dx%d) (was %dx%d)",
+			p_width,
+			p_height,
+			m_width,
+			m_height
+		);
 		m_width = p_width;
 		m_height = p_height;
 		m_frameReady = false;
@@ -118,7 +126,25 @@ public:
 	{
 		MiniwinPhaseScope phase(MINIWIN_PHASE_PRESENT);
 		m_frameCounter++;
-		if (PrepareFrame() && m_native.Composite({m_vpX, m_vpY, m_vpW, m_vpH})) {
+		bool prepared = PrepareFrame();
+		bool composited = prepared && m_native.Composite({m_vpX, m_vpY, m_vpW, m_vpH});
+		// Temporary diagnostics: the first presents and any failure (at most a few lines).
+		if (m_diagPresents < 3 || (!composited && m_diagPresentFailures < 5)) {
+			m_diagPresents++;
+			m_diagPresentFailures += composited ? 0 : 1;
+			SDL_LogInfo(
+				LOG_CATEGORY_MINIWIN,
+				"[diag-ws] d3d11 present#%llu: prepared=%d composite-viewport=%d,%d %dx%d ok=%d",
+				(unsigned long long) m_frameCounter,
+				(int) prepared,
+				m_vpX,
+				m_vpY,
+				m_vpW,
+				m_vpH,
+				(int) composited
+			);
+		}
+		if (composited) {
 			m_overlayActive = true;
 			MiniwinOverlay_Emit(this);
 			m_overlayActive = false;
@@ -155,7 +181,20 @@ private:
 		}
 		int dw = 0;
 		int dh = 0;
-		MiniwinApp_RunOnMainThread([&]() { SDL_GetWindowSizeInPixels(m_window, &dw, &dh); });
+		int pointsW = 0;
+		int pointsH = 0;
+		float density = 0.f;
+		float displayScale = 0.f;
+		SDL_WindowFlags windowFlags = 0;
+		MiniwinApp_RunOnMainThread([&]() {
+			SDL_GetWindowSizeInPixels(m_window, &dw, &dh);
+			SDL_GetWindowSize(m_window, &pointsW, &pointsH);
+			density = SDL_GetWindowPixelDensity(m_window);
+			displayScale = SDL_GetWindowDisplayScale(m_window);
+			windowFlags = SDL_GetWindowFlags(m_window);
+		});
+		int sdlW = dw;
+		int sdlH = dh;
 		if (dw <= 0 || dh <= 0 || m_width <= 0 || m_height <= 0 || !m_native.ResizeSwapchain(dw, dh)) {
 			return false;
 		}
@@ -164,9 +203,82 @@ private:
 		int height;
 		SceneSize(width, height);
 		m_frameReady = m_native.ResizeScene(width, height);
+		DiagPrepare(sdlW, sdlH, pointsW, pointsH, density, displayScale, windowFlags, dw, dh, width, height);
 		return m_frameReady;
 	}
 
+	// Temporary diagnostics: logs when SDL's reported size, the real swapchain size, the scene
+	// size or the composite viewport change (a line each, so a stable session logs nothing).
+	void DiagPrepare(
+		int p_sdlW,
+		int p_sdlH,
+		int p_pointsW,
+		int p_pointsH,
+		float p_density,
+		float p_displayScale,
+		SDL_WindowFlags p_flags,
+		int p_swapW,
+		int p_swapH,
+		int p_sceneW,
+		int p_sceneH
+	)
+	{
+		int key[] = {
+			p_sdlW,
+			p_sdlH,
+			p_pointsW,
+			p_pointsH,
+			(int) (p_density * 100.f),
+			(int) (p_displayScale * 100.f),
+			(int) (p_flags & (SDL_WINDOW_FULLSCREEN | SDL_WINDOW_MAXIMIZED)),
+			p_swapW,
+			p_swapH,
+			p_sceneW,
+			p_sceneH,
+			m_vpX,
+			m_vpY,
+			m_vpW,
+			m_vpH,
+			WidescreenActive() ? 1 : 0,
+			m_width,
+			m_height
+		};
+		if (m_diagKeyValid && SDL_memcmp(key, m_diagKey, sizeof(key)) == 0) {
+			return;
+		}
+		SDL_memcpy(m_diagKey, key, sizeof(key));
+		m_diagKeyValid = true;
+		SDL_LogInfo(
+			LOG_CATEGORY_MINIWIN,
+			"[diag-ws] d3d11 prepare: sdl-px=%dx%d sdl-pt=%dx%d density=%.2f display-scale=%.2f %s%s "
+			"swapchain=%dx%d scene=%dx%d vp=%d,%d %dx%d logical=%dx%d ws-active=%d scene-ok=%d",
+			p_sdlW,
+			p_sdlH,
+			p_pointsW,
+			p_pointsH,
+			(double) p_density,
+			(double) p_displayScale,
+			(p_flags & SDL_WINDOW_FULLSCREEN) ? "FULLSCREEN" : "not-fullscreen",
+			(p_flags & SDL_WINDOW_MAXIMIZED) ? "+MAXIMIZED" : "",
+			p_swapW,
+			p_swapH,
+			p_sceneW,
+			p_sceneH,
+			m_vpX,
+			m_vpY,
+			m_vpW,
+			m_vpH,
+			m_width,
+			m_height,
+			WidescreenActive() ? 1 : 0,
+			(int) m_frameReady
+		);
+	}
+
+	int m_diagKey[18] = {};
+	bool m_diagKeyValid = false;
+	int m_diagPresents = 0;
+	int m_diagPresentFailures = 0;
 	MiniwinD3D11Native m_native;
 	SDL_Window* m_window = nullptr;
 	bool m_frameReady = false;

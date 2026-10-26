@@ -292,6 +292,20 @@ bool MiniwinD3D11Native::Impl::AcquireSwapTarget()
 	drawableW = (int) desc.Width;
 	drawableH = (int) desc.Height;
 	SDL_LogInfo(LOG_CATEGORY_MINIWIN, "D3D11 swapchain: %dx%d", drawableW, drawableH);
+	// Temporary diagnostics: what DXGI says the swapchain is (logged only on (re)acquire).
+	DXGI_SWAP_CHAIN_DESC1 swapDesc = {};
+	if (SUCCEEDED(swapchain->GetDesc1(&swapDesc))) {
+		SDL_LogInfo(
+			LOG_CATEGORY_MINIWIN,
+			"[diag-ws] d3d11 swapchain desc: %ux%u scaling=%d effect=%d buffers=%u format=%d",
+			(unsigned) swapDesc.Width,
+			(unsigned) swapDesc.Height,
+			(int) swapDesc.Scaling,
+			(int) swapDesc.SwapEffect,
+			(unsigned) swapDesc.BufferCount,
+			(int) swapDesc.Format
+		);
+	}
 	return true;
 }
 
@@ -666,6 +680,46 @@ bool MiniwinD3D11Native::Impl::Draw(
 		viewport.TopLeftY = (float) p_viewport->y;
 		viewport.Width = (float) p_viewport->w;
 		viewport.Height = (float) p_viewport->h;
+	}
+	// Temporary diagnostics: each distinct render target / viewport combination is logged once.
+	{
+		const int key[] = {
+			(int) p_overlay,
+			sceneW,
+			sceneH,
+			drawableW,
+			drawableH,
+			p_logicalW,
+			p_logicalH,
+			(int) viewport.TopLeftX,
+			(int) viewport.TopLeftY,
+			(int) viewport.Width,
+			(int) viewport.Height
+		};
+		static int seen[16][sizeof(key) / sizeof(key[0])];
+		static int seenCount = 0;
+		bool known = false;
+		for (int i = 0; i < seenCount; i++) {
+			known = known || SDL_memcmp(seen[i], key, sizeof(key)) == 0;
+		}
+		if (!known && seenCount < 16) {
+			SDL_memcpy(seen[seenCount++], key, sizeof(key));
+			SDL_LogInfo(
+				LOG_CATEGORY_MINIWIN,
+				"[diag-ws] d3d11 draw target=%s scene=%dx%d swapchain=%dx%d logical=%dx%d viewport=%d,%d %dx%d",
+				p_overlay ? "swapchain" : "scene",
+				sceneW,
+				sceneH,
+				drawableW,
+				drawableH,
+				p_logicalW,
+				p_logicalH,
+				key[7],
+				key[8],
+				key[9],
+				key[10]
+			);
+		}
 	}
 	context->RSSetViewports(1, &viewport);
 	context->RSSetState(pipeline->raster.Get());

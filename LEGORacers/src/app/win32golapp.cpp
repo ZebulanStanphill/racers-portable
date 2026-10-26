@@ -15,6 +15,7 @@
 #include "render/golcommondrawstate.h"
 
 #include <SDL3/SDL.h>
+#include <miniwin/diagmouse.h>
 #include <miniwin/miniwinapp.h>
 #include <miniwin/touch.h>
 #include <miniwin/widescreen.h>
@@ -400,6 +401,7 @@ LegoBool32 Win32GolApp::IsCursorInClientArea(HWND p_hWnd)
 void Win32GolApp::UpdateMousePosition()
 {
 	m_eventHandler->OnCursorInside();
+	MiniwinDiagMouse_Poll(m_windowMode == c_windowModeWindowed); // [library:input] temporary Xbox diagnostics
 
 	if (m_windowMode == c_windowModeWindowed) {
 		RECT rect;
@@ -456,6 +458,12 @@ void Win32GolApp::UpdateMousePosition()
 			// on every poll like one outside the window.
 			long uiX = 0;
 			long uiY = 0;
+			MiniwinDiagMouse_AbsoluteCursor(
+				cursorPos.x - topLeft.x,
+				cursorPos.y - topLeft.y,
+				cursorMoved,
+				widescreen
+			); // [library:input] temporary Xbox diagnostics
 			if (widescreen && !MiniwinWidescreen_MapUI(
 								  (float) (cursorPos.x - topLeft.x) / (float) (bottomRight.x - topLeft.x),
 								  (float) (cursorPos.y - topLeft.y) / (float) (bottomRight.y - topLeft.y),
@@ -477,6 +485,10 @@ void Win32GolApp::UpdateMousePosition()
 					cursorPos.x = static_cast<LONG>(static_cast<LegoFloat>(cursorPos.x) / xScale);
 					cursorPos.y = static_cast<LONG>(static_cast<LegoFloat>(cursorPos.y) / yScale);
 				}
+				MiniwinDiagMouse_AbsoluteCursorUi(
+					cursorPos.x,
+					cursorPos.y
+				); // [library:input] temporary Xbox diagnostics
 				m_eventHandler->OnCursorMoved(cursorPos.x, cursorPos.y);
 			}
 		}

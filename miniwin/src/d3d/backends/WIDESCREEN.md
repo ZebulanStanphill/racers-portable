@@ -76,7 +76,7 @@ depends on the menu classes.
 ```sh
 c++ -std=c++17 -Iminiwin/src/d3d -Iminiwin/src/internal \
   -Iminiwin/include -Iminiwin/include/miniwin -Ibuild/_deps/sdl3-src/include \
-  miniwin/src/d3d/backends/widescreen.cpp miniwin/tests/widescreen.cpp \
+  miniwin/src/d3d/backends/widescreen.cpp miniwin/src/d3d/backends/diagws.cpp miniwin/tests/widescreen.cpp \
   -Lbuild/_deps/sdl3-build -lSDL3 -Wl,-rpath,$PWD/build/_deps/sdl3-build \
   -o /tmp/miniwin-widescreen
 /tmp/miniwin-widescreen

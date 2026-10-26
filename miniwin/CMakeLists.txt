@@ -20,6 +20,7 @@ add_library(miniwin STATIC
   # Render backend selection/dispatch (always compiled)
   src/d3d/backends/backends.cpp
   src/d3d/backends/widescreen.cpp
+  src/d3d/backends/diagws.cpp
   src/d3d/backends/overlay.cpp
 
   # DirectSound
@@ -28,6 +29,7 @@ add_library(miniwin STATIC
   # DirectInput
   src/dinput/dinput.cpp
   src/dinput/touch.cpp
+  src/dinput/diagmouse.cpp
 )
 
 # Xbox (UWP) app support: finding the game files without a command line, and a log file.

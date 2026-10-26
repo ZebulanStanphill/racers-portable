@@ -2,6 +2,7 @@
 
 #include "backends.h"
 #include "ddraw_impl.h"
+#include "diagws.h"
 #include "miniwin.h"
 #include "renderbackend.h"
 
@@ -298,5 +299,15 @@ HRESULT MiniwinDirectDraw::SetDisplayMode(
 	m_modeHeight = dwHeight;
 	m_modeBpp = dwBPP;
 	MINIWIN_TRACE("SetDisplayMode %ux%ux%u", dwWidth, dwHeight, dwBPP);
+	SDL_LogInfo(
+		LOG_CATEGORY_MINIWIN,
+		"[diag-ws] ddraw SetDisplayMode %ux%ux%u refresh=%u flags=0x%x coop=0x%x",
+		(unsigned) dwWidth,
+		(unsigned) dwHeight,
+		(unsigned) dwBPP,
+		(unsigned) dwRefreshRate,
+		(unsigned) dwFlags,
+		(unsigned) m_coopFlags
+	);
 	return DD_OK;
 }

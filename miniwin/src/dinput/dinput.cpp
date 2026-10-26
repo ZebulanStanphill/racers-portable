@@ -5,6 +5,7 @@
 
 #include "miniwin.h"
 
+#include <miniwin/diagmouse.h>
 #include <miniwin/dinput.h>
 #include <miniwin/miniwinapp.h>
 #include <miniwin/widescreen.h>
@@ -277,6 +278,13 @@ struct InputRing {
 static InputRing g_keyboardRing;
 static InputRing g_mouseRing;
 
+// Diagnostic wrapper: every mouse-ring push is also counted (see diagmouse.h).
+static void PushMouse(DWORD p_offset, DWORD p_data)
+{
+	MiniwinDiagMouse_RingPush(p_offset, p_data);
+	g_mouseRing.Push(p_offset, p_data);
+}
+
 // Borrowed from the DirectInput joystick devices; only the game thread changes
 // this list. Reading the raw stick here leaves lRx/lRy and race bindings intact.
 static std::vector<SDL_Gamepad*> g_cursorGamepads;
@@ -349,21 +357,22 @@ void MiniwinInput_SetMouseScale(float p_scaleX, float p_scaleY)
 
 void MiniwinInput_InjectMouseButton(bool p_down)
 {
-	g_mouseRing.Push(DIMOFS_BUTTON0, p_down ? 0x80 : 0x00);
+	PushMouse(DIMOFS_BUTTON0, p_down ? 0x80 : 0x00);
 }
 
 void MiniwinInput_InjectMouseMotion(long p_dx, long p_dy)
 {
 	if (p_dx != 0) {
-		g_mouseRing.Push(DIMOFS_X, (DWORD) (LONG) p_dx);
+		PushMouse(DIMOFS_X, (DWORD) (LONG) p_dx);
 	}
 	if (p_dy != 0) {
-		g_mouseRing.Push(DIMOFS_Y, (DWORD) (LONG) p_dy);
+		PushMouse(DIMOFS_Y, (DWORD) (LONG) p_dy);
 	}
 }
 
 void MiniwinInput_HandleEvent(const SDL_Event& p_event)
 {
+	MiniwinDiagMouse_OnGameEvent(p_event);
 	switch (p_event.type) {
 	case SDL_EVENT_KEY_DOWN:
 	case SDL_EVENT_KEY_UP: {
@@ -403,16 +412,16 @@ void MiniwinInput_HandleEvent(const SDL_Event& p_event)
 		accumX -= (float) dx;
 		accumY -= (float) dy;
 		if (dx != 0) {
-			g_mouseRing.Push(DIMOFS_X, (DWORD) dx);
+			PushMouse(DIMOFS_X, (DWORD) dx);
 		}
 		if (dy != 0) {
-			g_mouseRing.Push(DIMOFS_Y, (DWORD) dy);
+			PushMouse(DIMOFS_Y, (DWORD) dy);
 		}
 		break;
 	}
 	case SDL_EVENT_MOUSE_WHEEL:
 		if (p_event.wheel.y != 0.0f) {
-			g_mouseRing.Push(DIMOFS_Z, (DWORD) (LONG) (p_event.wheel.y * 120.0f));
+			PushMouse(DIMOFS_Z, (DWORD) (LONG) (p_event.wheel.y * 120.0f));
 		}
 		break;
 	case SDL_EVENT_MOUSE_BUTTON_DOWN:
@@ -443,6 +452,7 @@ void MiniwinInput_HandleEvent(const SDL_Event& p_event)
 			long y;
 			if (width > 0 && height > 0 &&
 				!MiniwinWidescreen_MapUI(p_event.button.x / width, p_event.button.y / height, 640, 480, &x, &y)) {
+				MiniwinDiagMouse_WidescreenDrop();
 				break;
 			}
 		}
@@ -463,7 +473,7 @@ void MiniwinInput_HandleEvent(const SDL_Event& p_event)
 		default:
 			return;
 		}
-		g_mouseRing.Push(ofs, p_event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 0x80 : 0x00);
+		PushMouse(ofs, p_event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 0x80 : 0x00);
 		break;
 	}
 	default:
@@ -826,8 +836,14 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 		DWORD produced = 0;
 		if (ring && rgdod) {
 			while (produced < requested && ring->Pop(rgdod[produced])) {
+				if (m_kind == Kind::Mouse) {
+					MiniwinDiagMouse_DeviceItem(rgdod[produced].dwOfs, rgdod[produced].dwData);
+				}
 				produced++;
 			}
+		}
+		if (m_kind == Kind::Mouse) {
+			MiniwinDiagMouse_DeviceData(requested, produced);
 		}
 
 		*pdwInOut = produced;
@@ -862,6 +878,9 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 			return DIERR_GENERIC;
 		}
 		memset(lpvData, 0, cbData);
+		if (m_kind == Kind::Mouse) {
+			MiniwinDiagMouse_DeviceState(cbData);
+		}
 
 		if (m_kind != Kind::Joystick || !m_gamepad || cbData < sizeof(DIJOYSTATE2)) {
 			return DI_OK;
@@ -929,12 +948,18 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 			});
 		}
 #endif
+		if (m_kind == Kind::Mouse) {
+			MiniwinDiagMouse_Acquire(true);
+		}
 		m_acquired = true;
 		return DI_OK;
 	}
 
 	HRESULT Unacquire() override
 	{
+		if (m_kind == Kind::Mouse) {
+			MiniwinDiagMouse_Acquire(false);
+		}
 		m_acquired = false;
 		return DI_OK;
 	}
@@ -1145,8 +1170,12 @@ HRESULT IDirectInputDevice2A::Poll()
 {
 	return DI_OK;
 }
-HRESULT IDirectInputDevice2A::SetCooperativeLevel(HWND, DWORD)
+HRESULT IDirectInputDevice2A::SetCooperativeLevel(HWND p_window, DWORD p_flags)
 {
+	// Diagnostics: every device funnels through here; only the mouse is reported.
+	if (static_cast<MiniwinInputDevice*>(this)->m_kind == MiniwinInputDevice::Kind::Mouse) {
+		MiniwinDiagMouse_CooperativeLevel((unsigned) p_flags, (const void*) p_window);
+	}
 	return DI_OK;
 }
 HRESULT IDirectInputDevice2A::SetDataFormat(LPCDIDATAFORMAT)

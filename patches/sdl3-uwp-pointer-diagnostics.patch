@@ -1,0 +1,106 @@
+TEMPORARY diagnostics for the Xbox USB-mouse problem: log (rate-limited) every CoreWindow
+pointer event SDL3-uwp receives, with the pointer device type and where it is routed.
+Applies to SDL3-uwp 3fa5bba61a84a5c96ec37d8c6a82ab645fbc20ce (after sdl3-uwp-mouse-buttons.patch).
+
+diff --git a/src/video/winrt/SDL_winrtpointerinput.cpp b/src/video/winrt/SDL_winrtpointerinput.cpp
+index c6c9fa3..ea9c694 100644
+--- a/src/video/winrt/SDL_winrtpointerinput.cpp
++++ b/src/video/winrt/SDL_winrtpointerinput.cpp
+@@ -210,8 +210,41 @@ static bool WINRT_IsTouchEvent(Windows::UI::Input::PointerPoint ^ pointerPoint)
+ #endif
+ }
+ 
++
++// racers-portable diagnostics: a rate-limited log of the CoreWindow pointer events this
++// file receives and where each one is routed, to tell "Windows never delivered it" from
++// "SDL dropped it". The first 10 events of each kind are logged, then every 500th.
++static void WINRT_DiagPointer(int kind, SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint, const char *route)
++{
++    static const char *const names[] = { "pressed", "moved", "released", "entered", "exited", "wheel" };
++    static Uint32 counts[6];
++    Uint32 n = ++counts[kind];
++    if (n > 10 && (n % 500) != 0) {
++        return;
++    }
++    SDL_LogInfo(SDL_LOG_CATEGORY_CUSTOM,
++                "[diag-mouse] winrt pointer %s #%u: device-type=%d (0=touch 1=pen 2=mouse) pointer-id=%u update-kind=%d "
++                "pos=(%.1f,%.1f) sdl-window=%dx%d relative-mode=%d route=%s",
++                names[kind], n,
++                (int)pointerPoint->PointerDevice->PointerDeviceType,
++                (unsigned)pointerPoint->PointerId,
++                (int)pointerPoint->Properties->PointerUpdateKind,
++                pointerPoint->Position.X, pointerPoint->Position.Y,
++                window ? window->w : -1, window ? window->h : -1,
++                (int)WINRT_UsingRelativeMouseMode, route);
++}
++
++static const char *WINRT_DiagRoute(SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint)
++{
++    if (!window) {
++        return "dropped: no SDL window";
++    }
++    return WINRT_IsTouchEvent(pointerPoint) ? "touch/pen -> SDL finger events" : "mouse -> SDL mouse events";
++}
++
+ void WINRT_ProcessPointerPressedEvent(SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint)
+ {
++    WINRT_DiagPointer(0, window, pointerPoint, WINRT_DiagRoute(window, pointerPoint));
+     if (!window) {
+         return;
+     }
+@@ -238,6 +271,7 @@ void WINRT_ProcessPointerPressedEvent(SDL_Window *window, Windows::UI::Input::Po
+ 
+ void WINRT_ProcessPointerMovedEvent(SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint)
+ {
++    WINRT_DiagPointer(1, window, pointerPoint, WINRT_UsingRelativeMouseMode ? "dropped: relative mouse mode" : WINRT_DiagRoute(window, pointerPoint));
+     if (!window || WINRT_UsingRelativeMouseMode) {
+         return;
+     }
+@@ -266,6 +300,7 @@ void WINRT_ProcessPointerMovedEvent(SDL_Window *window, Windows::UI::Input::Poin
+ 
+ void WINRT_ProcessPointerReleasedEvent(SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint)
+ {
++    WINRT_DiagPointer(2, window, pointerPoint, WINRT_DiagRoute(window, pointerPoint));
+     if (!window) {
+         return;
+     }
+@@ -291,6 +326,7 @@ void WINRT_ProcessPointerReleasedEvent(SDL_Window *window, Windows::UI::Input::P
+ 
+ void WINRT_ProcessPointerEnteredEvent(SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint)
+ {
++    WINRT_DiagPointer(3, window, pointerPoint, WINRT_DiagRoute(window, pointerPoint));
+     if (!window) {
+         return;
+     }
+@@ -302,6 +338,7 @@ void WINRT_ProcessPointerEnteredEvent(SDL_Window *window, Windows::UI::Input::Po
+ 
+ void WINRT_ProcessPointerExitedEvent(SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint)
+ {
++    WINRT_DiagPointer(4, window, pointerPoint, WINRT_DiagRoute(window, pointerPoint));
+     if (!window) {
+         return;
+     }
+@@ -313,6 +350,7 @@ void WINRT_ProcessPointerExitedEvent(SDL_Window *window, Windows::UI::Input::Poi
+ 
+ void WINRT_ProcessPointerWheelChangedEvent(SDL_Window *window, Windows::UI::Input::PointerPoint ^ pointerPoint)
+ {
++    WINRT_DiagPointer(5, window, pointerPoint, WINRT_DiagRoute(window, pointerPoint));
+     if (!window) {
+         return;
+     }
+@@ -323,6 +361,15 @@ void WINRT_ProcessPointerWheelChangedEvent(SDL_Window *window, Windows::UI::Inpu
+ 
+ void WINRT_ProcessMouseMovedEvent(SDL_Window *window, Windows::Devices::Input::MouseEventArgs ^ args)
+ {
++    // racers-portable diagnostics: the raw (relative-only) MouseDevice::MouseMoved path.
++    static Uint32 diagMouseMoved;
++    ++diagMouseMoved;
++    if (diagMouseMoved <= 10 || (diagMouseMoved % 500) == 0) {
++        SDL_LogInfo(SDL_LOG_CATEGORY_CUSTOM,
++                    "[diag-mouse] winrt MouseDevice::MouseMoved #%u: delta=(%d,%d) relative-mode=%d window=%s -> %s",
++                    diagMouseMoved, (int)args->MouseDelta.X, (int)args->MouseDelta.Y, (int)WINRT_UsingRelativeMouseMode,
++                    window ? "yes" : "no", (window && WINRT_UsingRelativeMouseMode) ? "SDL relative motion" : "ignored");
++    }
+     if (!window || !WINRT_UsingRelativeMouseMode) {
+         return;
+     }

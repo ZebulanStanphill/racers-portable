@@ -1,8 +1,10 @@
 // [library:window] Thread-safe SDL event queue between the main thread and the game
 // thread.
 
+#include "diagws.h"
 #include "miniwin.h"
 
+#include <miniwin/diagmouse.h>
 #include <miniwin/miniwinapp.h>
 #include <vector>
 
@@ -129,6 +131,9 @@ static void EnsureQueue()
 
 void MiniwinApp_PushEvent(const SDL_Event& p_event)
 {
+	// Temporary diagnostics: raw SDL events, before any queueing or filtering.
+	MiniwinDiagMouse_OnSdlEvent(p_event);
+	MiniwinDiagWs_OnEvent(p_event);
 	EnsureQueue();
 	SDL_LockMutex(g_queueMutex);
 

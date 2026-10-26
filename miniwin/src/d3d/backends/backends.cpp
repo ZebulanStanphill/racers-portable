@@ -6,6 +6,7 @@
 
 #include "backends.h"
 
+#include "diagws.h"
 #include "miniwin.h"
 #include "renderbackend.h"
 
@@ -728,8 +729,11 @@ void MiniwinBackend_PresentVideoFrame(SDL_Window* p_window, const void* p_rgba, 
 
 	const Uint16 indices[6] = {0, 1, 2, 2, 1, 3};
 
+	MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_VIDEO);
 	backend->ClearScene(nullptr, 0.0f, 0.0f, 0.0f, true, false);
+	MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_VIDEO);
 	backend->SubmitTriangles(state, quad, 4, indices, 6);
+	MiniwinDiagWs_SetEntry(MINIWIN_DIAG_ENTRY_VIDEO);
 	backend->PresentScene();
 }
 

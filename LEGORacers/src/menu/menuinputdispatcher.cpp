@@ -11,6 +11,7 @@
 #include "render/goldrawstate.h"
 
 #include <memory.h>
+#include <miniwin/diagmouse.h>
 #include <miniwin/miniwinapp.h>
 #include <miniwin/touch.h>
 
@@ -276,6 +277,16 @@ LegoS32 MenuInputDispatcher::Update(undefined4 p_elapsedMs)
 	if (m_cursor.m_golExport) {
 		MouseDevice* mouse = m_inputManager->GetMouse();
 
+		// [library:input] Temporary Xbox diagnostics.
+		MiniwinDiagMouse_MenuCursor(
+			(m_drawState->m_flags & GolDrawState::c_flagHardwareDevice) != 0,
+			mouse->GetAxisValue(1),
+			mouse->GetAxisValue(2),
+			m_cursor.m_cursorX,
+			m_cursor.m_cursorY,
+			m_cursor.m_isCursorVisible != 0,
+			m_cursor.IsCursorEnabled() != 0
+		);
 		if (mouse->GetAxisValue(1) != 0.0f || mouse->GetAxisValue(2) != 0.0f) {
 			DispatchMouseMove(mouse);
 		}

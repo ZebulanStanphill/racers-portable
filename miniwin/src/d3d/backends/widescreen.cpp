@@ -1,4 +1,5 @@
 // [library:3d] Shared presentation policy and submission-time UI transform.
+#include "diagws.h"
 #include "renderbackend.h"
 
 #include <miniwin/miniwinapp.h>
@@ -31,7 +32,9 @@ void MiniwinWidescreen_Load()
 	if (PrefPath(path, sizeof(path))) {
 		void* data = SDL_LoadFile(path, nullptr);
 		if (data) {
+			bool before = g_widescreen;
 			g_widescreen = SDL_strcmp((const char*) data, "on") == 0;
+			MiniwinDiagWs_Pref("load", before, g_widescreen);
 			SDL_free(data);
 		}
 	}
@@ -39,6 +42,7 @@ void MiniwinWidescreen_Load()
 
 void MiniwinWidescreen_Set(bool p_enabled)
 {
+	MiniwinDiagWs_Pref("set", g_widescreen, p_enabled);
 	g_widescreen = p_enabled;
 	char path[1024];
 	if (PrefPath(path, sizeof(path))) {
@@ -75,6 +79,7 @@ MiniwinWorldScope::MiniwinWorldScope()
 {
 	m_previous = g_world;
 	g_world = true;
+	MiniwinDiagWs_Scope(true, m_previous, g_world);
 }
 
 MiniwinWorldScope::~MiniwinWorldScope()
@@ -87,6 +92,7 @@ void MiniwinWorldScope::End()
 	if (!m_ended) {
 		g_world = m_previous;
 		m_ended = true;
+		MiniwinDiagWs_Scope(false, false, g_world);
 	}
 }
 
@@ -110,6 +116,7 @@ bool MiniwinRenderBackend::UpdatePresentation(int p_dw, int p_dh)
 	m_vpY = y;
 	m_vpW = w;
 	m_vpH = h;
+	MiniwinDiagWs_Presentation(*this);
 	return changed;
 }
 
@@ -141,9 +148,11 @@ float MiniwinRenderBackend::UIWidthFraction() const
 
 void MiniwinRenderBackend::PresentScene()
 {
+	bool worldFrame = g_worldFrame;
 	Present();
 	g_barsDirty = g_barsDirty || (g_worldFrame && WidescreenActive());
 	g_worldFrame = false;
+	MiniwinDiagWs_Present(*this, g_world, worldFrame, g_barsDirty);
 }
 
 // Black panels over the side regions, in the wide logical space.
@@ -164,6 +173,7 @@ void MiniwinRenderBackend::DrawSideBars()
 	const Uint16 indices[] = {0, 1, 2, 2, 1, 3, 4, 5, 6, 6, 5, 7};
 	DrawTriangles(state, vertices, 8, indices, 12);
 	g_barsDirty = false;
+	MiniwinDiagWs_SideBars(false);
 }
 
 // A UI draw in a frame that has not drawn the world yet: wipe the previous wide frame.
@@ -171,6 +181,7 @@ void MiniwinRenderBackend::ClearStaleSideBars()
 {
 	if (g_barsDirty && !g_worldFrame) {
 		DrawSideBars();
+		MiniwinDiagWs_SideBars(true);
 	}
 }
 
@@ -182,6 +193,7 @@ void MiniwinRenderBackend::SubmitTriangles(
 	Uint32 p_indexCount
 )
 {
+	MiniwinDiagWs_Draw(g_world, WidescreenActive(), p_vertexCount, p_indexCount);
 	if (g_world || !WidescreenActive()) {
 		g_worldFrame = g_worldFrame || g_world;
 		DrawTriangles(p_state, p_vertices, p_vertexCount, p_indices, p_indexCount);
@@ -219,6 +231,7 @@ void MiniwinRenderBackend::ClearScene(
 	bool p_depth
 )
 {
+	MiniwinDiagWs_Clear(g_world, WidescreenActive(), p_rect, m_width, m_height, p_color, p_depth);
 	if (g_world || !WidescreenActive()) {
 		g_worldFrame = g_worldFrame || g_world;
 		Clear(p_rect, p_r, p_g, p_b, p_color, p_depth);
@@ -248,6 +261,7 @@ void MiniwinRenderBackend::ClearScene(
 void MiniwinWidescreen_Pillarbox()
 {
 	auto* backend = MiniwinBackend_Get();
+	MiniwinDiagWs_Pillarbox(backend && backend->WidescreenActive());
 	if (backend && backend->WidescreenActive()) {
 		backend->DrawSideBars();
 	}
