@@ -488,6 +488,33 @@ static const struct {
 	{&GUID_RyAxis, DIJOFS_RY, "Right Stick Y"},
 };
 
+// The gamepad buttons exposed to the game, in the order Windows DirectInput reports an
+// Xbox controller. The game's default joystick binding gives race action slot i the
+// button i - 2, so this order picks the defaults: accelerate A, brake B, power-up X,
+// camera Y, HUD LB, powerslide RB, look back View. The D-pad has no entries: it is
+// folded into the left stick. The names must stay short: with the axis names they have to fit NameBudget.
+static const struct {
+	SDL_GamepadButton m_button;
+	const char* m_name;
+} g_joystickButtons[] = {
+	{SDL_GAMEPAD_BUTTON_SOUTH, "A"},
+	{SDL_GAMEPAD_BUTTON_EAST, "B"},
+	{SDL_GAMEPAD_BUTTON_WEST, "X"},
+	{SDL_GAMEPAD_BUTTON_NORTH, "Y"},
+	{SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, "LB"},
+	{SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, "RB"},
+	{SDL_GAMEPAD_BUTTON_BACK, "View"},
+	{SDL_GAMEPAD_BUTTON_START, "Menu"},
+	{SDL_GAMEPAD_BUTTON_LEFT_STICK, "LS"},
+	{SDL_GAMEPAD_BUTTON_RIGHT_STICK, "RS"},
+	{SDL_GAMEPAD_BUTTON_GUIDE, "Guide"},
+	{SDL_GAMEPAD_BUTTON_MISC1, "Misc"},
+	{SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1, "P1"}, // Xbox Elite paddle names
+	{SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2, "P2"},
+	{SDL_GAMEPAD_BUTTON_LEFT_PADDLE1, "P3"},
+	{SDL_GAMEPAD_BUTTON_LEFT_PADDLE2, "P4"},
+};
+
 struct MiniwinInputDevice;
 
 struct MiniwinInputEffect : public IDirectInputEffect {
@@ -617,7 +644,7 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 			break;
 		case Kind::Joystick:
 			lpDIDevCaps->dwAxes = SDL_arraysize(g_joystickAxes);
-			lpDIDevCaps->dwButtons = 16;
+			lpDIDevCaps->dwButtons = SDL_arraysize(g_joystickButtons);
 			break;
 		}
 
@@ -635,7 +662,7 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 		case Kind::Mouse:
 			return 4 * (4 + 4 * 3);
 		case Kind::Joystick:
-			return 4 * (16 + 4 * (int) SDL_arraysize(g_joystickAxes));
+			return 4 * ((int) SDL_arraysize(g_joystickButtons) + 4 * (int) SDL_arraysize(g_joystickAxes));
 		}
 		return 0;
 	}
@@ -711,9 +738,8 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 				}
 				break;
 			case Kind::Joystick:
-				for (int i = 0; i < 16; i++) {
-					SDL_snprintf(name, sizeof(name), "Btn %d", i);
-					if (!EmitObject(lpCallback, pvRef, GUID_Button, DIJOFS_BUTTON(i), name)) {
+				for (size_t i = 0; i < SDL_arraysize(g_joystickButtons); i++) {
+					if (!EmitObject(lpCallback, pvRef, GUID_Button, DIJOFS_BUTTON(i), g_joystickButtons[i].m_name)) {
 						return DI_OK;
 					}
 				}
@@ -854,11 +880,8 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 		state->rgdwPOV[2] = 0xFFFFFFFF;
 		state->rgdwPOV[3] = 0xFFFFFFFF;
 
-		for (int i = 0; i < 16; i++) {
-			if (i >= SDL_GAMEPAD_BUTTON_DPAD_UP && i <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
-				continue; // Leave these slots zeroed without renumbering other buttons.
-			}
-			state->rgbButtons[i] = SDL_GetGamepadButton(m_gamepad, (SDL_GamepadButton) i) ? 0x80 : 0x00;
+		for (size_t i = 0; i < SDL_arraysize(g_joystickButtons); i++) {
+			state->rgbButtons[i] = SDL_GetGamepadButton(m_gamepad, g_joystickButtons[i].m_button) ? 0x80 : 0x00;
 		}
 
 		return DI_OK;
