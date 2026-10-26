@@ -314,6 +314,20 @@ void MiniwinInput_HandleEvent(const SDL_Event& p_event)
 		break;
 	}
 	case SDL_EVENT_MOUSE_MOTION: {
+#ifdef WINDOWS_STORE
+		static bool loggedMotion = false;
+		if (!loggedMotion && p_event.motion.which != SDL_TOUCH_MOUSEID) {
+			loggedMotion = true;
+			SDL_LogInfo(
+				LOG_CATEGORY_MINIWIN,
+				"UWP first mouse motion: x=%.1f y=%.1f dx=%.1f dy=%.1f",
+				p_event.motion.x,
+				p_event.motion.y,
+				p_event.motion.xrel,
+				p_event.motion.yrel
+			);
+		}
+#endif
 		// Scale the raw window-space delta into the game's cursor space (consumed by the menu
 		// cursor's relative accumulation and by widget drag handlers). The fractional remainder
 		// is carried across events so slow motion is not lost to integer rounding.
@@ -340,6 +354,19 @@ void MiniwinInput_HandleEvent(const SDL_Event& p_event)
 		break;
 	case SDL_EVENT_MOUSE_BUTTON_DOWN:
 	case SDL_EVENT_MOUSE_BUTTON_UP: {
+#ifdef WINDOWS_STORE
+		static bool loggedButton[2] = {};
+		int edge = p_event.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? 0 : 1;
+		if (!loggedButton[edge] && p_event.button.which != SDL_TOUCH_MOUSEID) {
+			loggedButton[edge] = true;
+			SDL_LogInfo(
+				LOG_CATEGORY_MINIWIN,
+				"UWP first mouse button %s: button=%u",
+				edge == 0 ? "down" : "up",
+				(unsigned) p_event.button.button
+			);
+		}
+#endif
 		DWORD ofs;
 		switch (p_event.button.button) {
 		case SDL_BUTTON_LEFT:
@@ -771,6 +798,29 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 
 	HRESULT Acquire() override
 	{
+#ifdef WINDOWS_STORE
+		if (m_kind == Kind::Mouse && !m_acquired) {
+			MiniwinApp_RunOnMainThread([]() {
+				SDL_Window* window = SDL_GetKeyboardFocus();
+				if (!window) {
+					SDL_LogInfo(LOG_CATEGORY_MINIWIN, "UWP mouse configure: no window");
+					return;
+				}
+				// Keep CoreWindow's absolute pointer/button path. SDL derives xrel/yrel
+				// from it; MouseDevice::MouseMoved is used only in relative mode.
+				bool ok = SDL_SetWindowRelativeMouseMode(window, false);
+				SDL_LogInfo(
+					LOG_CATEGORY_MINIWIN,
+					"UWP mouse configured: relative=%d hidden=%d blank-cursor-resource=5000 ok=%d%s%s",
+					(int) SDL_GetWindowRelativeMouseMode(window),
+					(int) !SDL_CursorVisible(),
+					(int) ok,
+					ok ? "" : " error=",
+					ok ? "" : SDL_GetError()
+				);
+			});
+		}
+#endif
 		m_acquired = true;
 		return DI_OK;
 	}

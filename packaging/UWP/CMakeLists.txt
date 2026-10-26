@@ -33,4 +33,10 @@ target_sources(legoracers PRIVATE
   ${UWP_ASSET_FILES}
   "${CMAKE_CURRENT_BINARY_DIR}/Package.appxmanifest"
   "${CMAKE_CURRENT_SOURCE_DIR}/RacersPortable.pfx"
+  # SDL3-uwp's hidden cursor uses resource 5000. Without it, hiding the system
+  # cursor falls back to PointerCursor=nullptr, which suppresses mouse motion.
+  "${CMAKE_CURRENT_SOURCE_DIR}/blankcursor.rc"
 )
+target_include_directories(legoracers PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+set_property(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/blankcursor.rc"
+  TARGET_DIRECTORY legoracers APPEND PROPERTY OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/blankcursor.cur")
