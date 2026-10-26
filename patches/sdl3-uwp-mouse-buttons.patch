@@ -1,0 +1,35 @@
+WinRT mouse buttons still use SDL2's (state, button) argument order.
+SDL3 takes (button, bool down); update all three CoreWindow pointer paths.
+Applies to SDL3-uwp 3fa5bba61a84a5c96ec37d8c6a82ab645fbc20ce.
+
+diff --git a/src/video/winrt/SDL_winrtpointerinput.cpp b/src/video/winrt/SDL_winrtpointerinput.cpp
+index 63c109e..c6c9fa3 100644
+--- a/src/video/winrt/SDL_winrtpointerinput.cpp
++++ b/src/video/winrt/SDL_winrtpointerinput.cpp
+@@ -220,7 +220,7 @@ void WINRT_ProcessPointerPressedEvent(SDL_Window *window, Windows::UI::Input::Po
+         Uint8 button, pressed;
+         WINRT_GetSDLButtonForPointerPoint(pointerPoint, &button, &pressed);
+         SDL_assert(pressed == 1);
+-        SDL_SendMouseButton(0, window, SDL_DEFAULT_MOUSE_ID, 0, button);
++        SDL_SendMouseButton(0, window, SDL_DEFAULT_MOUSE_ID, button, true);
+     } else {
+         Windows::Foundation::Point normalizedPoint = WINRT_TransformCursorPosition(window, pointerPoint->Position, NormalizeZeroToOne);
+         Windows::Foundation::Point windowPoint = WINRT_TransformCursorPosition(window, pointerPoint->Position, TransformToSDLWindowSize);
+@@ -249,7 +249,7 @@ void WINRT_ProcessPointerMovedEvent(SDL_Window *window, Windows::UI::Input::Poin
+         // For some odd reason Moved events are used for multiple mouse buttons
+         Uint8 button, pressed;
+         if (WINRT_GetSDLButtonForPointerPoint(pointerPoint, &button, &pressed)) {
+-            SDL_SendMouseButton(0, window, SDL_DEFAULT_MOUSE_ID, pressed, button);
++            SDL_SendMouseButton(0, window, SDL_DEFAULT_MOUSE_ID, button, pressed != 0);
+         }
+ 
+         SDL_SendMouseMotion(0, window, SDL_DEFAULT_MOUSE_ID, false, windowPoint.X, windowPoint.Y);
+@@ -274,7 +274,7 @@ void WINRT_ProcessPointerReleasedEvent(SDL_Window *window, Windows::UI::Input::P
+         Uint8 button, pressed;
+         WINRT_GetSDLButtonForPointerPoint(pointerPoint, &button, &pressed);
+         SDL_assert(pressed == 0);
+-        SDL_SendMouseButton(0, window, SDL_DEFAULT_MOUSE_ID, 1, button);
++        SDL_SendMouseButton(0, window, SDL_DEFAULT_MOUSE_ID, button, false);
+     } else {
+         Windows::Foundation::Point normalizedPoint = WINRT_TransformCursorPosition(window, pointerPoint->Position, NormalizeZeroToOne);
+ 
