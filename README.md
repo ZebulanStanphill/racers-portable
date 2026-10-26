@@ -28,6 +28,8 @@ Place the built `LEGORacers` executable next to the game's data files (`LEGO.JAM
 
 Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AVIs.
 
+Default gamepad race controls follow an Xbox controller: steer with the left stick or D-pad, accelerate with A, brake with B, power-up with X, camera with Y, cycle the HUD with LB, powerslide with RB, and look back with View. Controls you reassigned on a gamepad before this layout was introduced now refer to different buttons; reassign them on the controls screen.
+
 The right stick moves the visible menu cursor, with finer control near the center; A selects the focused item, and race controls keep their existing stick bindings.
 
 ## Library substitutions
