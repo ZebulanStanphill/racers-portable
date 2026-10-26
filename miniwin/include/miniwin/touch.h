@@ -59,8 +59,8 @@ bool MiniwinTouch_PollRaceButtons(void* p_owner, bool p_gate, unsigned* p_presse
 void MiniwinTouch_NotifyRaceDialog();
 
 // MenuTextField focus hook: requests/dismisses the platform on-screen keyboard.
-// Deliberately a no-op until a touch device has been used — SDL text input has caused
-// macOS window-server stalls, so it is only started where touch actually needs it.
+// Enabled for UWP's system keyboard, or after a touch device has been used. Other
+// desktops keep key-event input to avoid macOS window-server stalls.
 void MiniwinTouch_TextFieldFocus(bool p_focused);
 
 // --- portable application side (Win32GolApp) ---
@@ -80,7 +80,7 @@ bool MiniwinTouch_MenuCursorActive();
 // false when no touch cursor is active.
 bool MiniwinTouch_GetMenuCursor(long* p_x, long* p_y, int p_logicalW, int p_logicalH);
 
-// True while a text field is focused on a touch-capable device: Tick then feeds
-// SDL_EVENT_TEXT_INPUT to OnChar and suppresses its printable-key synthesis so web
-// physical keyboards do not double-type.
+// True while a focused field uses SDL text input (touch or UWP): Tick then feeds
+// SDL_EVENT_TEXT_INPUT to OnChar and suppresses printable-key synthesis so physical
+// keyboards do not double-type. Backspace/Enter/Escape still use key events.
 bool MiniwinTouch_TextInputActive();
