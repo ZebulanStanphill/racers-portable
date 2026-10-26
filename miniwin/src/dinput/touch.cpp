@@ -31,6 +31,7 @@
 
 #include <miniwin/miniwinapp.h>
 #include <miniwin/touch.h>
+#include <miniwin/widescreen.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -347,6 +348,11 @@ static void BecomeMenuCursor(TouchFinger& p_finger)
 		// would double-click); extra fingers don't steal the cursor mid-interaction.
 		return;
 	}
+	long x;
+	long y;
+	if (MiniwinWidescreen_Active() && !MiniwinWidescreen_MapUI(p_finger.m_nx, p_finger.m_ny, 640, 480, &x, &y)) {
+		return;
+	}
 	p_finger.m_role = TouchRole::MenuCursor;
 	g_menuCursorDown = true;
 	g_menuCursorUpAtMs = 0;
@@ -472,7 +478,10 @@ static void HandleFingerUp(const SDL_TouchFingerEvent& p_finger, bool p_canceled
 		g_menuCursorUpAtMs = SDL_GetTicks();
 		// Click on release, once the hover pass has armed the widget under the
 		// finger (see BecomeMenuCursor). A canceled finger releases without a click.
-		if (!p_canceled) {
+		long x;
+		long y;
+		if (!p_canceled &&
+			(!MiniwinWidescreen_Active() || MiniwinWidescreen_MapUI(p_finger.x, p_finger.y, 640, 480, &x, &y))) {
 			MiniwinInput_InjectMouseButton(true);
 			MiniwinInput_InjectMouseButton(false);
 		}
@@ -710,6 +719,15 @@ bool MiniwinTouch_GetMenuCursor(long* p_x, long* p_y, int p_logicalW, int p_logi
 {
 	if (!MiniwinTouch_MenuCursorActive() || p_logicalW <= 0 || p_logicalH <= 0) {
 		return false;
+	}
+
+	if (MiniwinWidescreen_Active()) {
+		// Same centred-rect inverse as the letterbox path below; a drag that leaves the
+		// rect pins the cursor to its edge.
+		MiniwinWidescreen_MapUI(g_menuCursorNX, g_menuCursorNY, p_logicalW, p_logicalH, p_x, p_y);
+		*p_x = SDL_clamp(*p_x, 0, p_logicalW - 1);
+		*p_y = SDL_clamp(*p_y, 0, p_logicalH - 1);
+		return true;
 	}
 
 	// Map the normalized finger position into the game's logical cursor space by

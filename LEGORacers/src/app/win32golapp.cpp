@@ -17,6 +17,7 @@
 #include <SDL3/SDL.h>
 #include <miniwin/miniwinapp.h>
 #include <miniwin/touch.h>
+#include <miniwin/widescreen.h>
 #include <mmsystem.h>
 #include <stdio.h>
 #include <string.h>
@@ -430,7 +431,15 @@ void Win32GolApp::UpdateMousePosition()
 			// absolute position, but menu widgets still read these deltas, so leaving them in
 			// raw window space would scale drag input by the fill factor.
 			MiniwinInput_SetMouseScale(1.0f / xScale, 1.0f / yScale);
+#else
+			MiniwinInput_SetMouseScale(1.0f, 1.0f);
 #endif
+			// [library:input] Widget drag deltas share the absolute cursor's UI scale: the
+			// centred 4:3 region is 4/3 of the client height wide.
+			bool widescreen = MiniwinWidescreen_Active();
+			if (widescreen) {
+				MiniwinInput_SetMouseScale(width / (height * yScale * (4.0f / 3.0f)), 1.0f / yScale);
+			}
 			// [library:input] Assert the polled OS cursor only when it actually moved —
 			// the original's updates came from mouse-move messages. On touch-only devices
 			// (mobile browsers) the SDL mouse never moves, so re-asserting its stale
@@ -443,11 +452,31 @@ void Win32GolApp::UpdateMousePosition()
 				g_lastCursorPosValid && (cursorPos.x != g_lastCursorPos.x || cursorPos.y != g_lastCursorPos.y);
 			g_lastCursorPos = cursorPos;
 			g_lastCursorPosValid = true;
+			// [library:input] A cursor over a widescreen side panel is outside the centred UI,
+			// on every poll like one outside the window.
+			long uiX = 0;
+			long uiY = 0;
+			if (widescreen && !MiniwinWidescreen_MapUI(
+								  (float) (cursorPos.x - topLeft.x) / (float) (bottomRight.x - topLeft.x),
+								  (float) (cursorPos.y - topLeft.y) / (float) (bottomRight.y - topLeft.y),
+								  (int) width,
+								  (int) height,
+								  &uiX,
+								  &uiY
+							  )) {
+				m_eventHandler->OnCursorOutside();
+			}
 			if (cursorMoved) {
 				cursorPos.x -= topLeft.x;
 				cursorPos.y -= topLeft.y;
-				cursorPos.x = static_cast<LONG>(static_cast<LegoFloat>(cursorPos.x) / xScale);
-				cursorPos.y = static_cast<LONG>(static_cast<LegoFloat>(cursorPos.y) / yScale);
+				if (widescreen) {
+					cursorPos.x = (LONG) uiX;
+					cursorPos.y = (LONG) uiY;
+				}
+				else {
+					cursorPos.x = static_cast<LONG>(static_cast<LegoFloat>(cursorPos.x) / xScale);
+					cursorPos.y = static_cast<LONG>(static_cast<LegoFloat>(cursorPos.y) / yScale);
+				}
 				m_eventHandler->OnCursorMoved(cursorPos.x, cursorPos.y);
 			}
 		}
