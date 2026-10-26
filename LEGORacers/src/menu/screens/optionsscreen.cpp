@@ -7,6 +7,7 @@
 #include "render/goldrawstate.h"
 #include "util/displaydriverguid.h"
 
+#include <miniwin/widescreenoptions.h>
 #include <string.h>
 
 DECOMP_SIZE_ASSERT(OptionsScreen, 0x6750)
@@ -21,6 +22,8 @@ OptionsScreen::OptionsScreen()
 // FUNCTION: LEGORACERS 0x00475630
 OptionsScreen::~OptionsScreen()
 {
+	// [library:config] Release the extra row before its screen and resources.
+	MiniwinWidescreenOptions_Destroy();
 	Destroy();
 }
 
@@ -79,6 +82,8 @@ void OptionsScreen::CreateVideoWidgets()
 		CreateTextLabel(&m_videoLabels[i], static_cast<undefined2>(i + 0x102), 0x37, static_cast<undefined2>(i + 0x5b));
 	}
 
+	// [library:config] Independent widescreen selector; no gameplay bindings changed.
+	MiniwinWidescreenOptions_Create(this, m_context->m_context->m_languageIndex);
 	HideVideoWidgets();
 }
 
@@ -125,6 +130,8 @@ void OptionsScreen::HideMainButtons()
 // FUNCTION: LEGORACERS 0x00475a30
 void OptionsScreen::ShowVideoWidgets()
 {
+	// [library:config] Widescreen applies immediately.
+	MiniwinWidescreenOptions_Show(true);
 	m_driverSelector.SetFlags(2);
 
 	for (LegoS32 i = 0; i < 2; i++) {
@@ -140,6 +147,8 @@ void OptionsScreen::ShowVideoWidgets()
 // FUNCTION: LEGORACERS 0x00475aa0
 void OptionsScreen::HideVideoWidgets()
 {
+	// [library:config] Hide our row with the original video widgets.
+	MiniwinWidescreenOptions_Show(false);
 	m_driverSelector.ClearFlags(2);
 
 	for (LegoS32 i = 0; i < 2; i++) {

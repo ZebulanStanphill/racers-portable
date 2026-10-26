@@ -1,10 +1,10 @@
 # Widescreen mode
 
-`--widescreen on|off` (persisted in `widescreen` next to the `renderer` preference,
-default off) uses the whole window instead of letterboxing it. It is active only
-while the drawable is wider than 4:3; in any other window the output is identical to
-off, and a change of the setting or of the window size applies on the next frame
-without a relaunch. Widescreen overrides `--scale stretch`.
+`--widescreen on|off` (also Options → Video, persisted in `widescreen` next to the
+`renderer` preference, default off) widens the race view to the window instead of
+letterboxing it. It is active only while the drawable is wider than 4:3; in any other
+window the output is identical to off, and a toggle or window resize applies on the
+next frame without a relaunch. Widescreen overrides `--scale stretch`.
 
 ## Coordinates and the two draw phases
 
@@ -18,8 +18,7 @@ draw is tagged when it is submitted:
   are exactly those of a 4:3 window of the same height.
 - **World**: the race scene and full-screen fades. A `MiniwinWorldScope` in
   `RaceSession::Draw` (and in `DrawFullWidthFades` for the fade quads) leaves
-  logical x untouched, so 0..640 spans the whole wide scene. Scopes nest: leaving one
-  restores the phase that was active when it began.
+  logical x untouched, so 0..640 spans the whole wide scene.
 
 The tag is read at submission time and copied into the recorded vertices, never at
 replay: SDL_GPU records every draw/clear and replays them in `Present`, so no global
@@ -69,6 +68,15 @@ not hit UI (menu fingers there are ignored, windowed mouse presses are dropped, 
 windowed cursor reports "outside"). Fullscreen drives the game cursor by relative
 motion, as before, and is not filtered. The touch overlay works in drawable pixels and
 is unaffected.
+
+## Options → Video row
+
+`miniwin/src/game/widescreenoptions.cpp` builds a selector by copying the OPTIONS.MIB
+selector binding and style the renderer row uses (the MIB is never edited), below the
+renderer selector. Its values are the game's translated YES/NO strings (MENUTEXT
+strings 115/116) and its label is looked up by language folder
+(`ENGLISH` fallback; language index 10 is Finnish). It lives in the app, not in miniwin's library, because it
+depends on the menu classes.
 
 ## Known limits
 
