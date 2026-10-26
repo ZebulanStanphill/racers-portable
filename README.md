@@ -68,6 +68,8 @@ The build applies our fixes to SDL3-uwp from [patches/](patches/): `sdl3-uwp-con
 
 Every build is signed with the same certificate (`packaging/UWP/RacersPortable.pfx`), and each CI build has a higher version than the one before (`0.1.<run number>.0`), so installing a newer build updates the app in place and keeps its saved data. Windows won't install an older build over a newer one: uninstall the app first to go back.
 
+**Uninstalling the app deletes your saved games and settings** (see [Game files, saves and the log](#game-files-saves-and-the-log)). To try a newer build, install it over the old one instead.
+
 ### Game files, saves and the log
 
 The Xbox app gets no command line, so it looks for the game files in two folders and uses the first one that has `LEGO.JAM`:
