@@ -28,6 +28,8 @@ Place the built `LEGORacers` executable next to the game's data files (`LEGO.JAM
 
 Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AVIs.
 
+On a gamepad, the D-pad works like the left stick: it moves through menus and steers in races.
+
 ## Library substitutions
 
 To achieve our goal of platform independence, we need to replace any Windows-only libraries with platform-independent alternatives. This ensures that our codebase remains versatile and compatible across various systems. The following table serves as an overview of major libraries / subsystems and their chosen replacements.
