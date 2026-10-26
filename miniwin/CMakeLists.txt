@@ -32,6 +32,7 @@ add_library(miniwin STATIC
 # Xbox (UWP) app support: finding the game files without a command line, and a log file.
 if(WINDOWS_STORE)
   target_sources(miniwin PRIVATE src/windows/uwpdatadir.cpp src/windows/uwplog.cpp)
+  include(src/windows/d3dprobe/probe.cmake)
 endif()
 
 # Render backends are selected at build time per platform, mirroring isle-portable:

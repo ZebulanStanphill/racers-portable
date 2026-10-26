@@ -245,11 +245,15 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 	// game files in the Xbox's known places. If they aren't there, don't start the game:
 	// SDL_AppIterate tells the player, then quits.
 	if (!pathFromCli && !MiniwinUwp_EnterGameDataDirectory()) {
+		// [library:3d] The missing-data path has already opened the fallback log.
+		MiniwinUwp_ProbeDirect3D();
 		return SDL_APP_CONTINUE;
 	}
 
 	// [library:config] The log file goes beside the game files.
 	MiniwinUwp_OpenLogFile(nullptr);
+	// [library:3d] Temporary capability probe, before the game's renderer starts.
+	MiniwinUwp_ProbeDirect3D();
 #endif
 
 #ifdef __EMSCRIPTEN__

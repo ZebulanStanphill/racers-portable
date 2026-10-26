@@ -43,4 +43,8 @@ const char* MiniwinUwp_OpenLogFile(const char* p_directory);
 // in the user data directory, so the lines logged so far aren't lost.
 void MiniwinUwp_FlushPendingLog();
 
+// [library:3d] Temporary Xbox capability diagnostic. Call after opening latest-log.txt,
+// before starting the game renderer. Logs failures and always returns to the caller.
+void MiniwinUwp_ProbeDirect3D();
+
 #endif
