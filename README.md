@@ -33,6 +33,8 @@ On a gamepad, the D-pad works like the left stick: it moves through menus and st
 
 Default gamepad race controls follow an Xbox controller: steer with the left stick or D-pad, accelerate with A, brake with B, power-up with X, camera with Y, cycle the HUD with LB, powerslide with RB, and look back with View. Controls you reassigned on a gamepad before this layout was introduced now refer to different buttons; reassign them on the controls screen.
 
+Menu (Start) pauses a race. With the pause menu open it closes it again, choosing Continue (or "No" in a confirmation). Assigning a race action to Menu on the controls screen takes priority over pausing.
+
 The right stick moves the visible menu cursor, with finer control near the center; A selects the focused item, and race controls keep their existing stick bindings.
 
 ## Library substitutions

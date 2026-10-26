@@ -35,6 +35,7 @@
 #include "world/golworlddatabase.h"
 
 #include <memory.h>
+#include <miniwin/gamepad.h>
 #include <miniwin/touch.h>
 #include <miniwin/widescreen.h>
 #include <mmsystem.h>
@@ -2483,6 +2484,22 @@ void RaceSession::OnKeyDown(LegoU32 p_keyCode)
 		break;
 	case c_keyPrintScreen:
 		TakeScreenshot();
+		break;
+	case InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_BUTTON_MENU:
+		// [library:input] Gamepad Menu pauses like Escape. With the dialog up it takes the dialog's
+		// safe choice instead (Continue, or "No" in a confirmation); Escape does nothing there in the
+		// original, and stays that way. A race action bound to the button consumes it first.
+		if (!m_pauseState) {
+			m_pauseState = 1;
+			OpenPauseDialog();
+		}
+		else if (
+			m_pauseState != 2 && p_keyCode != m_dialog.m_acceptKey && m_dialog.m_state == 1 && m_dialog.m_selecting
+		) {
+			m_dialog.m_selectionIndex = m_pauseState == 3 ? 1 : 0;
+			m_dialog.OnKeyDown(RaceDialog::c_keyboardEnter);
+			m_dialog.OnKeyUp(RaceDialog::c_keyboardEnter);
+		}
 		break;
 	}
 
