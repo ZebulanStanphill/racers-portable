@@ -31,7 +31,9 @@ cmake --build build
 
 ## Player-facing options
 
-`--path <dir>`, `--language <index>`, `--scale letterbox|stretch`, `--resolution native|original`, plus the original arguments (`-window`, `-novideo`, …). No `-window` means fullscreen. Alt+Enter toggles fullscreen.
+`--path <dir>`, `--language <index>`, `--renderer sdlgpu|opengl3|opengles3|d3d11`, `--scale letterbox|stretch`, `--resolution native|original`, plus the original arguments (`-window`, `-novideo`, …). No `-window` means fullscreen. Alt+Enter toggles fullscreen.
+
+Renderers: SDL3 GPU (default), OpenGL 3.3, OpenGL ES 3 / WebGL2, and native Direct3D 11 (Windows, feature level 10.0+). The Xbox build falls back from SDL_GPU to D3D11 on Xbox One; Series X|S keep SDL_GPU when available. D3D11 uses build-time Windows SDK FXC Shader Model 4.0 shaders and an isolated SDK target to avoid miniwin header clashes. See `miniwin/src/d3d/backends/d3d11/README.md` for threading and implementation notes.
 
 Touch (touchscreens/web): always-on additive controls — left-half drag steers (thumb held = throttle), drawn buttons for power-up/slide/brake + pause/look-back, tap-to-click menus, pause-dialog ▲✓▼ cluster, OSK name entry. Single local player only: Versus split-screen sessions stand the whole layer down (no overlay, fingers ignored; menus unaffected). Layer lives in `miniwin/src/dinput/touch.cpp` + `miniwin/src/d3d/backends/overlay.cpp`; game-side hooks are tagged `// [library:input]` (playercontrols.cpp, racesession.cpp, menutextfield.cpp, driverlicensescreen.cpp).
 
