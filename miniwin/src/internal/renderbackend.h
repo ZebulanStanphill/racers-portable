@@ -44,7 +44,8 @@ struct MiniwinRasterState {
 
 class MiniwinRenderBackend {
 public:
-	virtual ~MiniwinRenderBackend() = default;
+	// Out of line (widescreen.cpp): clears the process-shared "backend on screen" pointer.
+	virtual ~MiniwinRenderBackend();
 
 	virtual bool Init(SDL_Window* p_window) = 0;
 	virtual void Resize(int p_width, int p_height) = 0;
@@ -80,6 +81,18 @@ public:
 
 	// Reads the current backbuffer into an SDL_Surface (caller owns it).
 	virtual SDL_Surface* ReadBackbuffer() = 0;
+
+	// Shared geometry policy; backend shaders continue to consume logical coordinates.
+	bool WidescreenActive() const;
+	bool UpdatePresentation(int p_drawableW, int p_drawableH);
+	void SceneSize(int& p_width, int& p_height) const;
+	float UIWidthFraction() const;
+	void SubmitTriangles(const MiniwinRasterState&, const D3DTLVERTEX*, Uint32, const Uint16*, Uint32);
+	void ClearScene(const SDL_Rect*, float, float, float, bool, bool);
+	// Present the frame; also ends the widescreen frame's draw-phase bookkeeping.
+	void PresentScene();
+	void DrawSideBars();
+	void ClearStaleSideBars();
 
 	// The logical render size the game targets (e.g. 640x480).
 	int m_width = 640;

@@ -7,6 +7,7 @@
 
 #include <miniwin/dinput.h>
 #include <miniwin/miniwinapp.h>
+#include <miniwin/widescreen.h>
 #include <stdio.h>
 #include <string.h>
 #include <vector>
@@ -429,6 +430,22 @@ void MiniwinInput_HandleEvent(const SDL_Event& p_event)
 			);
 		}
 #endif
+		// [library:input] A press in a widescreen side panel is not a UI click. Fullscreen
+		// drives the game cursor by relative motion, decoupled from the OS pointer.
+		if (p_event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && MiniwinWidescreen_Active()) {
+			SDL_Window* window = SDL_GetWindowFromID(p_event.button.windowID);
+			int width = 0;
+			int height = 0;
+			if (window && !(SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN)) {
+				SDL_GetWindowSize(window, &width, &height);
+			}
+			long x;
+			long y;
+			if (width > 0 && height > 0 &&
+				!MiniwinWidescreen_MapUI(p_event.button.x / width, p_event.button.y / height, 640, 480, &x, &y)) {
+				break;
+			}
+		}
 		DWORD ofs;
 		switch (p_event.button.button) {
 		case SDL_BUTTON_LEFT:

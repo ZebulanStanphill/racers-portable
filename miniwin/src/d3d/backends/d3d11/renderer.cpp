@@ -159,21 +159,11 @@ private:
 		if (dw <= 0 || dh <= 0 || m_width <= 0 || m_height <= 0 || !m_native.ResizeSwapchain(dw, dh)) {
 			return false;
 		}
-		m_drawableW = dw;
-		m_drawableH = dh;
-		m_vpW = dw;
-		m_vpH = dh;
-		if (MiniwinGetScaleMode() == MINIWIN_SCALE_LETTERBOX) {
-			m_vpH = (int) ((float) dw * (float) m_height / (float) m_width);
-			if (m_vpH > dh) {
-				m_vpH = dh;
-				m_vpW = (int) ((float) dh * (float) m_width / (float) m_height);
-			}
-		}
-		m_vpX = (dw - m_vpW) / 2;
-		m_vpY = (dh - m_vpH) / 2;
-		bool original = MiniwinGetRenderResolution() == MINIWIN_RESOLUTION_ORIGINAL;
-		m_frameReady = m_native.ResizeScene(original ? m_width : dw, original ? m_height : dh);
+		UpdatePresentation(dw, dh);
+		int width;
+		int height;
+		SceneSize(width, height);
+		m_frameReady = m_native.ResizeScene(width, height);
 		return m_frameReady;
 	}
 

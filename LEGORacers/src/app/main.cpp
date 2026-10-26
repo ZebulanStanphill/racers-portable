@@ -21,6 +21,7 @@
 #include <miniwin/miniwinapp.h>
 #include <miniwin/touch.h>
 #include <miniwin/uwp.h>
+#include <miniwin/widescreen.h>
 #include <objbase.h>
 #include <stdlib.h>
 #include <string.h>
@@ -109,6 +110,7 @@ static void DisplayArgumentHelp()
 	SDL_Log("  --scale <mode>       fullscreen scaling: letterbox (default) or stretch");
 	SDL_Log("  --resolution <mode>  render at native (default) or original (640x480) resolution");
 	SDL_Log("  --renderer <name>    render backend: sdlgpu (default), opengl3, or opengles3");
+	SDL_Log("  --widescreen on|off  widen race views, menus and HUD stay 4:3 (default off, remembered)");
 	SDL_Log("  --help               show this help");
 	SDL_Log("Original game options (passed through):");
 	SDL_Log("  -novideo -window -horzres <n> -vertres <n>");
@@ -165,6 +167,15 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 		if (SDL_strcmp(argv[i], "--help") == 0) {
 			DisplayArgumentHelp();
 			return SDL_APP_SUCCESS;
+		}
+		// [library:config] Applied after persistent web storage is mounted below.
+		if (SDL_strcmp(argv[i], "--widescreen") == 0) {
+			if (i + 1 >= argc || (SDL_strcmp(argv[i + 1], "on") && SDL_strcmp(argv[i + 1], "off"))) {
+				SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "--widescreen requires on or off");
+				return SDL_APP_FAILURE;
+			}
+			i++;
+			continue;
 		}
 		if (SDL_strcmp(argv[i], "--language") == 0 && i + 1 < argc) {
 			MiniwinSetRegistryLangId((DWORD) SDL_atoi(argv[i + 1]));
@@ -282,6 +293,14 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv)
 	// Keep the game from ever exiting the user's browser fullscreen.
 	DisableBrowserFullscreenExit();
 #endif
+
+	// [library:config] CLI choices persist like the renderer preference.
+	MiniwinWidescreen_Load();
+	for (int i = 1; i + 1 < argc; i++) {
+		if (SDL_strcmp(argv[i], "--widescreen") == 0) {
+			MiniwinWidescreen_Set(SDL_strcmp(argv[++i], "on") == 0);
+		}
+	}
 
 	CoInitialize(0);
 
