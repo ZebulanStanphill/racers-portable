@@ -43,7 +43,12 @@ struct FragmentUniforms {
 	float m_alphaRef;
 	Sint32 m_colorKey;
 	float m_pad[2];
+	float m_pointOriginStep[4];
+	float m_pointCount[2];
+	float m_pointPad[2];
 };
+
+static_assert(sizeof(FragmentUniforms) == 64, "GLSL std140 fragment uniform packing");
 
 // A deferred frame operation (see file header).
 struct GpuCommand {
@@ -944,6 +949,18 @@ void MiniwinSdlGpuBackend::ReplayCommands()
 		fragmentUniforms.m_alphaFunc = command.m_state.alphaTest ? (Sint32) command.m_state.alphaFunc : 0;
 		fragmentUniforms.m_alphaRef = command.m_state.alphaRef;
 		fragmentUniforms.m_colorKey = command.m_state.colorKeyTest ? 1 : 0;
+		SDL_memcpy(
+			fragmentUniforms.m_pointOriginStep,
+			command.m_state.pointOriginStep,
+			sizeof(fragmentUniforms.m_pointOriginStep)
+		);
+		if (m_sceneW > m_width || m_sceneH > m_height) {
+			SDL_memcpy(
+				fragmentUniforms.m_pointCount,
+				command.m_state.pointCount,
+				sizeof(fragmentUniforms.m_pointCount)
+			);
+		}
 		SDL_PushGPUFragmentUniformData(m_cmdbuf, 0, &fragmentUniforms, sizeof(fragmentUniforms));
 
 		SDL_GPUTexture* texture = command.m_state.textured ? TextureFor(command.m_state.textureId) : nullptr;

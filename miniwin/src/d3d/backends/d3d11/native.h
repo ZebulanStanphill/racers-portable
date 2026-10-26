@@ -19,6 +19,8 @@ struct MiniwinD3D11State {
 	int alphaFunc = 0;
 	float alphaRef = 0.f;
 	int colorKey = 0;
+	float pointOriginStep[4] = {};
+	float pointCount[2] = {};
 	Uint32 textureId = 0;
 	bool linear = true;
 	bool wrap = false;

@@ -4,6 +4,7 @@
 
 #include "ddraw_impl.h"
 #include "miniwin.h"
+#include "pointquads.h"
 #include "renderbackend.h"
 
 #include <miniwin/d3d.h>
@@ -77,6 +78,36 @@ struct MiniwinD3DDevice : public IDirect3DDevice3 {
 		p_surface->m_textureDirty = false;
 		p_surface->m_paletteVersion = paletteVersion;
 		return p_surface->m_backendTexture;
+	}
+
+	void DrawTriangles(
+		MiniwinRasterState p_state,
+		const D3DTLVERTEX* p_vertices,
+		Uint32 p_vertexCount,
+		const Uint16* p_indices,
+		Uint32 p_indexCount
+	)
+	{
+		MiniwinRenderBackend* backend = Backend();
+		MiniwinSetPointQuadSampling(
+			p_state,
+			p_vertices,
+			p_vertexCount,
+			p_indices,
+			p_indexCount,
+			backend->m_width,
+			backend->m_height
+		);
+		m_vertexScratch.assign(p_vertices, p_vertices + p_vertexCount);
+		for (D3DTLVERTEX& vertex : m_vertexScratch) {
+			// D3D6 integer screen coordinates denote pixel centres. Modern backends
+			// use half-integers. Convert before the logical-to-native scaling, for
+			// all game geometry, without touching caller-owned vertices. Video,
+			// surface composites and overlays bypass this device boundary.
+			vertex.sx += 0.5f;
+			vertex.sy += 0.5f;
+		}
+		backend->DrawTriangles(p_state, m_vertexScratch.data(), p_vertexCount, p_indices, p_indexCount);
 	}
 
 	MiniwinRasterState BuildState()
@@ -160,6 +191,7 @@ struct MiniwinD3DDevice : public IDirect3DDevice3 {
 	MiniwinSurface* m_texture = nullptr;
 	IDirect3DViewport3* m_currentViewport = nullptr;
 	std::vector<Uint8> m_convertScratch;
+	std::vector<D3DTLVERTEX> m_vertexScratch;
 	std::vector<Uint16> m_stripIndices;
 };
 
@@ -355,7 +387,7 @@ HRESULT IDirect3DDevice3::DrawPrimitive(
 	const D3DTLVERTEX* vertices = (const D3DTLVERTEX*) lpvVertices;
 
 	if (dptPrimitiveType == D3DPT_TRIANGLELIST) {
-		backend->DrawTriangles(state, vertices, dwVertexCount, nullptr, 0);
+		self->DrawTriangles(state, vertices, dwVertexCount, nullptr, 0);
 	}
 	else if (dptPrimitiveType == D3DPT_TRIANGLESTRIP) {
 		// Triangulate the strip (alternating winding).
@@ -371,7 +403,7 @@ HRESULT IDirect3DDevice3::DrawPrimitive(
 			}
 			self->m_stripIndices.push_back((Uint16) i);
 		}
-		backend->DrawTriangles(
+		self->DrawTriangles(
 			state,
 			vertices,
 			dwVertexCount,
@@ -400,7 +432,7 @@ HRESULT IDirect3DDevice3::DrawIndexedPrimitive(
 	}
 
 	MiniwinRasterState state = self->BuildState();
-	backend->DrawTriangles(state, (const D3DTLVERTEX*) lpvVertices, dwVertexCount, lpwIndices, dwIndexCount);
+	self->DrawTriangles(state, (const D3DTLVERTEX*) lpvVertices, dwVertexCount, lpwIndices, dwIndexCount);
 	return D3D_OK;
 }
 

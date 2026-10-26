@@ -23,7 +23,7 @@ Place the built `LEGORacers` executable next to the game's data files (`LEGO.JAM
 
 - `--renderer sdlgpu|opengl3|opengles3|d3d11` — select the render backend: SDL3 GPU (default; Vulkan/Metal/Direct3D 12), OpenGL 3.3, OpenGL ES 3.0 / WebGL2, or native Direct3D 11 (Windows; feature level 10.0+). It can also be changed in-game under Options → Video (the game relaunches to apply it; on Xbox, restart the app manually).
 - `--scale letterbox|stretch` — fullscreen scaling: keep the 4:3 aspect ratio with black bars (default) or fill the screen.
-- `--resolution native|original` — render 3D at the display resolution (default) or at the game's original 640x480, upscaled.
+- `--resolution native|original` — render 3D at the display resolution (default) or at the game's original 640x480, upscaled. Point-sampled 2D blits preserve their original sample footprint at native resolution; see the [D3D6 rasterization notes](miniwin/src/d3d/backends/RASTERIZATION.md).
 - `--language <index>` — seeds the language selection the original stored in the registry.
 
 Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AVIs.

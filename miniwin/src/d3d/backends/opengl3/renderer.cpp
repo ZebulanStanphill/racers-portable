@@ -49,14 +49,30 @@ uniform int uSpecular; // D3DRENDERSTATE_SPECULARENABLE
 uniform int uAlphaFunc; // D3DCMPFUNC or 0 = disabled
 uniform float uAlphaRef;
 uniform int uColorKey; // discard fragments whose sampled texture alpha is keyed out
+uniform vec4 uPointOriginStep;
+uniform vec2 uPointCount;
 
 out vec4 oColor;
 
 void main()
 {
+	if (uPointCount.x < 0.0) {
+		discard;
+	}
 	vec4 sampled = vec4(1.0);
 	if (uColorOp != 2 || uAlphaOp != 2) {
-		sampled = texture(uTexture, vUV);
+		// Quantize only affine point-sampled 2D quads to their covered D3D6
+		// integer centres. Clamp so magnification never samples a neighbouring cell.
+		vec2 uv = vUV;
+		vec2 dx = dFdx(vUV), dy = dFdy(vUV);
+		if (uPointCount.x > 0.0) {
+			vec2 pixel = floor((uv - uPointOriginStep.xy) / uPointOriginStep.zw + 0.5);
+			uv = uPointOriginStep.xy + clamp(pixel, vec2(0.0), uPointCount - 1.0) * uPointOriginStep.zw;
+			// Keep the original logical-pixel LOD as well as the original UV samples.
+			dx = vec2(uPointOriginStep.z, 0.0);
+			dy = vec2(0.0, uPointOriginStep.w);
+		}
+		sampled = textureGrad(uTexture, uv, dx, dy);
 	}
 
 	if (uColorKey != 0 && sampled.a < 0.5) {
@@ -136,6 +152,8 @@ private:
 	GLint m_uSpecular = -1;
 	GLint m_uAlphaFunc = -1;
 	GLint m_uColorKey = -1;
+	GLint m_uPointOriginStep = -1;
+	GLint m_uPointCount = -1;
 
 	// m_vpX/Y/W/H (the letterboxed drawable-space viewport) and m_drawableW/H live in
 	// the base class, refreshed by UpdateViewport at the top of every Present.
@@ -260,6 +278,8 @@ bool MiniwinGl3Backend::Init(SDL_Window* p_window)
 	m_uSpecular = gl.glGetUniformLocation(m_program, "uSpecular");
 	m_uAlphaFunc = gl.glGetUniformLocation(m_program, "uAlphaFunc");
 	m_uColorKey = gl.glGetUniformLocation(m_program, "uColorKey");
+	m_uPointOriginStep = gl.glGetUniformLocation(m_program, "uPointOriginStep");
+	m_uPointCount = gl.glGetUniformLocation(m_program, "uPointCount");
 	m_uAlphaRef = gl.glGetUniformLocation(m_program, "uAlphaRef");
 
 	gl.glGenVertexArrays(1, &m_vao);
@@ -573,6 +593,16 @@ void MiniwinGl3Backend::ApplyState(const MiniwinRasterState& p_state)
 	gl.glUniform1i(m_uAlphaFunc, p_state.alphaTest ? (int) p_state.alphaFunc : 0);
 	gl.glUniform1f(m_uAlphaRef, p_state.alphaRef);
 	gl.glUniform1i(m_uColorKey, p_state.colorKeyTest ? 1 : 0);
+	gl.glUniform4f(
+		m_uPointOriginStep,
+		p_state.pointOriginStep[0],
+		p_state.pointOriginStep[1],
+		p_state.pointOriginStep[2],
+		p_state.pointOriginStep[3]
+	);
+	// At 1:1 retain the hardware's original interpolation (including texel-boundary ties).
+	bool magnified = m_sceneFboW > m_width || m_sceneFboH > m_height;
+	gl.glUniform2f(m_uPointCount, magnified ? p_state.pointCount[0] : 0.0f, magnified ? p_state.pointCount[1] : 0.0f);
 
 	if (p_state.textured) {
 		gl.glBindTexture(GL_TEXTURE_2D, p_state.textureId);
@@ -916,6 +946,7 @@ void MiniwinGl3Backend::DrawOverlay(
 	gl.glUniform1i(m_uSpecular, 0);
 	gl.glUniform1i(m_uAlphaFunc, 0);
 	gl.glUniform1i(m_uColorKey, 0);
+	gl.glUniform2f(m_uPointCount, 0.0f, 0.0f);
 
 	gl.glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 	gl.glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr) (p_vertexCount * sizeof(D3DTLVERTEX)), p_vertices, GL_STREAM_DRAW);

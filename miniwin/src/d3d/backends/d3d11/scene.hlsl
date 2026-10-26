@@ -13,6 +13,9 @@ cbuffer FragmentUniforms : register(b1)
 	float alphaRef;
 	int colorKey;
 	float2 fragmentPad;
+	float4 pointOriginStep;
+	float2 pointCount;
+	float2 pointPad;
 };
 Texture2D sceneTexture : register(t0);
 SamplerState sceneSampler : register(s0);
@@ -46,9 +49,21 @@ VertexOutput vs_main(VertexInput input)
 
 float4 ps_main(VertexOutput input) : SV_Target
 {
+	if (pointCount.x < 0.0) {
+		discard;
+	}
 	float4 sampled = float4(1.0, 1.0, 1.0, 1.0);
 	if (colorOp != 2 || alphaOp != 2) {
-		sampled = sceneTexture.Sample(sceneSampler, input.uv);
+		// Match the GL/SDL_GPU original-resolution point-sample lattice.
+		float2 uv = input.uv;
+		float2 dx = ddx(input.uv), dy = ddy(input.uv);
+		if (pointCount.x > 0.0) {
+			float2 pixel = floor((uv - pointOriginStep.xy) / pointOriginStep.zw + 0.5);
+			uv = pointOriginStep.xy + clamp(pixel, float2(0.0, 0.0), pointCount - 1.0) * pointOriginStep.zw;
+			dx = float2(pointOriginStep.z, 0.0);
+			dy = float2(0.0, pointOriginStep.w);
+		}
+		sampled = sceneTexture.SampleGrad(sceneSampler, uv, dx, dy);
 	}
 	if (colorKey != 0 && sampled.a < 0.5) {
 		discard;

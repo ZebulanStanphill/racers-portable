@@ -106,6 +106,8 @@ public:
 		state.alphaFunc = p_state.alphaTest ? (int) p_state.alphaFunc : 0;
 		state.alphaRef = p_state.alphaRef;
 		state.colorKey = p_state.colorKeyTest;
+		SDL_memcpy(state.pointOriginStep, p_state.pointOriginStep, sizeof(state.pointOriginStep));
+		SDL_memcpy(state.pointCount, p_state.pointCount, sizeof(state.pointCount));
 		state.textureId = p_state.textured ? p_state.textureId : 0;
 		state.linear = p_state.textureLinear;
 		state.wrap = p_state.textureWrap;
