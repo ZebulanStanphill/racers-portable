@@ -9,6 +9,7 @@
 #include <miniwin/miniwinapp.h>
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 
 // --- SDL scancode -> DirectInput DIK_* (PC scan code set 1) ---
 
@@ -275,6 +276,67 @@ struct InputRing {
 static InputRing g_keyboardRing;
 static InputRing g_mouseRing;
 
+// Borrowed from the DirectInput joystick devices; only the game thread changes
+// this list. Reading the raw stick here leaves lRx/lRy and race bindings intact.
+static std::vector<SDL_Gamepad*> g_cursorGamepads;
+
+bool MiniwinInput_GetMenuGamepadMotion(
+	Uint32 p_elapsedMs,
+	int p_logicalWidth,
+	bool p_cursorActive,
+	long* p_dx,
+	long* p_dy
+)
+{
+	static float remainderX = 0.0f;
+	static float remainderY = 0.0f;
+	*p_dx = 0;
+	*p_dy = 0;
+	float x = 0.0f;
+	float y = 0.0f;
+	float magnitudeSquared = 0.0f;
+	if (p_cursorActive) {
+		for (SDL_Gamepad* gamepad : g_cursorGamepads) {
+			float gx = (float) SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX) / 32768.0f;
+			float gy = (float) SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTY) / 32768.0f;
+			float squared = gx * gx + gy * gy;
+			if (squared > magnitudeSquared) {
+				// Use the strongest stick, so several pads cannot multiply the speed.
+				x = gx;
+				y = gy;
+				magnitudeSquared = squared;
+			}
+		}
+	}
+
+	const float deadZone = 0.22f;
+	float magnitude = SDL_sqrtf(magnitudeSquared);
+	if (magnitude <= deadZone || p_logicalWidth <= 0) {
+		remainderX = 0.0f;
+		remainderY = 0.0f;
+		return false;
+	}
+	float deflection = (SDL_min(magnitude, 1.0f) - deadZone) / (1.0f - deadZone);
+	// Full stick crosses 3/4 of the menu width per second. A quadratic ramp gives
+	// fine control near center; cap stalls and retain subpixel motion across frames.
+	float distance =
+		0.75f * (float) p_logicalWidth * deflection * deflection * (float) SDL_min(p_elapsedMs, 100u) / 1000.0f;
+	remainderX += x / magnitude * distance;
+	remainderY += y / magnitude * distance;
+	*p_dx = (long) remainderX;
+	*p_dy = (long) remainderY;
+	remainderX -= (float) *p_dx;
+	remainderY -= (float) *p_dy;
+#ifdef WINDOWS_STORE
+	static bool loggedMotion = false;
+	if (!loggedMotion && (*p_dx || *p_dy)) {
+		loggedMotion = true;
+		SDL_LogInfo(LOG_CATEGORY_MINIWIN, "Menu right-stick cursor: first motion dx=%ld dy=%ld", *p_dx, *p_dy);
+	}
+#endif
+	return *p_dx != 0 || *p_dy != 0;
+}
+
 static float g_mouseScaleX = 1.0f;
 static float g_mouseScaleY = 1.0f;
 
@@ -464,6 +526,12 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 	~MiniwinInputDevice() override
 	{
 		if (m_gamepad) {
+			for (auto it = g_cursorGamepads.begin(); it != g_cursorGamepads.end(); ++it) {
+				if (*it == m_gamepad) {
+					g_cursorGamepads.erase(it);
+					break;
+				}
+			}
 			SDL_Gamepad* gamepad = m_gamepad;
 			MiniwinApp_RunOnMainThread([gamepad]() { SDL_CloseGamepad(gamepad); });
 		}
@@ -474,6 +542,9 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 		m_joystickId = p_id;
 		SDL_Gamepad** result = &m_gamepad;
 		MiniwinApp_RunOnMainThread([result, p_id]() { *result = SDL_OpenGamepad(p_id); });
+		if (m_gamepad) {
+			g_cursorGamepads.push_back(m_gamepad);
+		}
 		return m_gamepad != nullptr;
 	}
 
