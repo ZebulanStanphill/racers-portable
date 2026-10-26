@@ -5,6 +5,8 @@
 #include "input/keyboarddevice.h"
 #include "input/mousedevice.h"
 
+#include <miniwin/gamepad.h>
+
 DECOMP_SIZE_ASSERT(MenuInputHandler, 0x248)
 
 // FUNCTION: LEGORACERS 0x0041f7b0
@@ -124,7 +126,8 @@ void MenuInputHandler::MapAllJoystickButtons()
 
 		if (joystick != NULL) {
 			for (LegoS32 j = 0; j < joystick->GetButtonCountFast(); j++) {
-				m_unk0x004[j] = 4;
+				// [library:input] The gamepad's B goes back instead of selecting.
+				m_unk0x004[j] = j == MINIWIN_GAMEPAD_BUTTON_B ? MINIWIN_GAMEPAD_MENU_BACK : 4;
 			}
 
 			joystick->SetEventMappings(m_unk0x004, NULL);

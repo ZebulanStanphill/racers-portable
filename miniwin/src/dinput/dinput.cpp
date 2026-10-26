@@ -534,6 +534,7 @@ static constexpr struct {
 };
 
 // The indices the game hooks use (miniwin/gamepad.h) must stay in step with the table.
+static_assert(g_joystickButtons[MINIWIN_GAMEPAD_BUTTON_B].m_button == SDL_GAMEPAD_BUTTON_EAST, "B index");
 static_assert(g_joystickButtons[MINIWIN_GAMEPAD_BUTTON_MENU].m_button == SDL_GAMEPAD_BUTTON_START, "Menu index");
 
 struct MiniwinInputDevice;

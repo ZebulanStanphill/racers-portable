@@ -2482,13 +2482,17 @@ void RaceSession::OnKeyDown(LegoU32 p_keyCode)
 	case c_keyPrintScreen:
 		TakeScreenshot();
 		break;
+	case InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_BUTTON_B:
 	case InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_BUTTON_MENU:
-		// [library:input] Gamepad Menu pauses like Escape. With the dialog up it takes the dialog's
-		// safe choice instead (Continue, or "No" in a confirmation); Escape does nothing there in the
-		// original, and stays that way. A race action bound to the button consumes it first.
+		// [library:input] Gamepad Menu pauses like Escape. With the dialog up, Menu and B take the
+		// dialog's safe choice instead (Continue, or "No" in a confirmation); Escape does nothing
+		// there in the original, and stays that way. B does nothing outside a dialog, and a race
+		// action bound to either button consumes the press first.
 		if (!m_pauseState) {
-			m_pauseState = 1;
-			OpenPauseDialog();
+			if (p_keyCode == (InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_BUTTON_MENU)) {
+				m_pauseState = 1;
+				OpenPauseDialog();
+			}
 		}
 		else if (
 			m_pauseState != 2 && p_keyCode != m_dialog.m_acceptKey && m_dialog.m_state == 1 && m_dialog.m_selecting

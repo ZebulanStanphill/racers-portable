@@ -107,6 +107,9 @@ public:
 	undefined2 GetHelpStringId() const { return m_helpStringId; }
 	MenuIcon* FindSelectedLeaf();
 
+	// [library:input] Activates the icon on this key even when it is not selected (OnKeyDown).
+	void SetHotkey(LegoU32 p_keyCode) { m_unk0x1a4 = p_keyCode; }
+
 	// SYNTHETIC: LEGORACERS 0x00471c80
 	// MenuIcon::`scalar deleting destructor'
 
