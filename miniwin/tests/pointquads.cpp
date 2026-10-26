@@ -25,7 +25,7 @@ static void CheckFootprint(const D3DTLVERTEX* p_quad)
 	assert(state.pointCount[0] > 0.0f);
 	// Build an independent reference: texels reached by the original integer-centre
 	// rasterizer. Magnified samples must belong to this set (even for minified UVs).
-	std::set<std::pair<int, int>> reference;
+	std::set<std::pair<int, int> > reference;
 	float du = (p_quad[2].tu - p_quad[0].tu) / (p_quad[2].sx - p_quad[0].sx);
 	float dv = (p_quad[1].tv - p_quad[0].tv) / (p_quad[1].sy - p_quad[0].sy);
 	for (int y = (int) std::ceil(p_quad[0].sy); y < p_quad[1].sy; y++) {
