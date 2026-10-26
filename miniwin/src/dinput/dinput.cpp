@@ -507,10 +507,10 @@ static const struct {
 };
 
 // The gamepad buttons exposed to the game, in the order Windows DirectInput reports an
-// Xbox controller. The game's default joystick binding gives race action slot i the
-// button i - 2, so this order picks the defaults: accelerate A, brake B, power-up X,
-// camera Y, HUD LB, powerslide RB, look back View. The D-pad has no entries: it is
-// folded into the left stick. The names must stay short: with the axis names they have to fit NameBudget.
+// Xbox controller. The order is fixed: the pause dialog and the menus read raw indices
+// (miniwin/gamepad.h), and the default race layout is picked per slot by
+// MiniwinGamepad_DefaultRaceButton below. The D-pad has no entries: it is folded into
+// the left stick. The names must stay short: with the axis names they have to fit NameBudget.
 static constexpr struct {
 	SDL_GamepadButton m_button;
 	const char* m_name;
@@ -536,6 +536,31 @@ static constexpr struct {
 // The indices the game hooks use (miniwin/gamepad.h) must stay in step with the table.
 static_assert(g_joystickButtons[MINIWIN_GAMEPAD_BUTTON_B].m_button == SDL_GAMEPAD_BUTTON_EAST, "B index");
 static_assert(g_joystickButtons[MINIWIN_GAMEPAD_BUTTON_MENU].m_button == SDL_GAMEPAD_BUTTON_START, "Menu index");
+
+int MiniwinGamepad_DefaultRaceButton(int p_slot)
+{
+	// By the game's race action slot, starting at 2 (see miniwin/gamepad.h).
+	static const SDL_GamepadButton defaults[] = {
+		SDL_GAMEPAD_BUTTON_SOUTH,          // accelerate: A
+		SDL_GAMEPAD_BUTTON_WEST,           // brake: X
+		SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,  // power-up: LB
+		SDL_GAMEPAD_BUTTON_NORTH,          // camera: Y
+		SDL_GAMEPAD_BUTTON_BACK,           // cycle HUD: View
+		SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, // powerslide: RB
+		SDL_GAMEPAD_BUTTON_EAST,           // look back: B
+	};
+
+	if (p_slot < 2 || p_slot - 2 >= (int) SDL_arraysize(defaults)) {
+		return -1;
+	}
+
+	for (size_t i = 0; i < SDL_arraysize(g_joystickButtons); i++) {
+		if (g_joystickButtons[i].m_button == defaults[p_slot - 2]) {
+			return (int) i;
+		}
+	}
+	return -1;
+}
 
 struct MiniwinInputDevice;
 
