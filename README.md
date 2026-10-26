@@ -71,6 +71,8 @@ This fork builds LEGO Racers as a UWP app for the Xbox One and Xbox Series X|S, 
 
 The build applies our fixes to SDL3-uwp from [patches/](patches/): `sdl3-uwp-controller-duplicates.patch` keeps each controller from showing up twice (and every press counting twice) when the Xbox runs the app as a game.
 
+The app's tiles show the LEGO Racers cover art, and its splash screen a fan-made recreation of the LEGO Racers logo by Eastwood2002, with the LEGO Group's own LEGO logo. See [packaging/UWP/assets/README.md](packaging/UWP/assets/README.md) for the full credits and sources.
+
 ### Installing
 
 1. Download the `legoracers-Xbox One` artifact from a run of the [CI workflow](https://github.com/ZebulanStanphill/racers-portable/actions/workflows/ci.yml) and unzip it. Its `legoracers/legoracers_<version>_x64_Test/` folder contains the app package (`legoracers_<version>_x64.msix`), the certificate it is signed with (`.cer`), and `Dependencies/x64/Microsoft.VCLibs.x64.14.00.appx`, the Visual C++ runtime the app needs.

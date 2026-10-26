@@ -29,20 +29,15 @@
       <uap:VisualElements
         DisplayName="LEGO® Racers"
         Description="LEGO® Racers Xbox One/Series X|S port"
-        BackgroundColor="#C91A09"
-        Square150x150Logo="Square150x150Logo.png"
+        BackgroundColor="#020272"
+        Square150x150Logo="Square150x150Logo.jpg"
         Square44x44Logo="Square44x44Logo.png">
-        <uap:SplashScreen Image="SplashScreen.png" uap5:Optional="true" BackgroundColor="#C91A09" />
+        <uap:SplashScreen Image="SplashScreen.png" uap5:Optional="true" BackgroundColor="#020272" />
         <uap:DefaultTile
           ShortName="LEGO® Racers"
-          Wide310x150Logo="Wide310x150Logo.png"
-          Square310x310Logo="LargeTile.png"
+          Wide310x150Logo="Wide310x150Logo.jpg"
+          Square310x310Logo="LargeTile.jpg"
           Square71x71Logo="Square71x71Logo.png">
-          <uap:ShowNameOnTiles>
-            <uap:ShowOn Tile="square150x150Logo" />
-            <uap:ShowOn Tile="wide310x150Logo" />
-            <uap:ShowOn Tile="square310x310Logo" />
-          </uap:ShowNameOnTiles>
         </uap:DefaultTile>
       </uap:VisualElements>
     </Application>
