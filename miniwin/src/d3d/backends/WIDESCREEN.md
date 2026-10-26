@@ -33,8 +33,9 @@ the centred region is exactly 640 wide (`--resolution original`).
 (removing a previous race frame from the side panels) and fills only the centred
 region with a non-black colour. `PresentScene` ends a frame; if the frame drew the
 world, the next frame that draws only UI paints the side panels black before its
-first draw (`ClearStaleSideBars`). The pause menu keeps the world frozen behind it
-and covers the panels explicitly (`MiniwinWidescreen_Pillarbox`).
+first draw (`ClearStaleSideBars`). The pause menu's dimming backdrop
+is drawn in a world scope too (`RaceDialog::Draw`), so it dims the whole widened view
+while its text stays in the centred UI.
 
 `--resolution original` renders a 480-high scene whose width is `480 * aspect`,
 rounded so that its difference from 640 is even; the centred UI then lands on whole
@@ -47,7 +48,7 @@ a plain static is two variables (macOS/Linux happen to merge them). The preferen
 the world flag and the "backend on screen" pointer therefore live in one block
 published through SDL's global properties (`racers.miniwin.widescreen`, see
 `widescreen.cpp`). The exe-facing functions (`MiniwinWidescreen_Active`,
-`_RaceAspect`, `_Pillarbox`, `_MapUI`) use the backend that last presented (the DLL's
+`_RaceAspect`, `_MapUI`) use the backend that last presented (the DLL's
 renderer), not the exe's own `MiniwinBackend_Get()` (the intro-video backend). The
 scale mode and render resolution are not shared this way yet.
 

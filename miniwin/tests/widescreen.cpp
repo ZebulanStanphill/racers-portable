@@ -132,9 +132,6 @@ int main()
 	b.ClearScene(&partial, 1.f, 0.f, 0.f, true, false);
 	assert(b.clears.back().rect.x == 80 && b.clears.back().rect.w == 240 && b.clears.back().rect.y == 240);
 
-	MiniwinWidescreen_Pillarbox();
-	assert(b.vertices.size() == 8 && Near(b.vertices[1].sx, 80.f) && Near(b.vertices[4].sx, 560.f));
-
 	// Scopes nest: leaving an inner scope restores the enclosing phase.
 	{
 		MiniwinWorldScope outer;

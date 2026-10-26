@@ -290,14 +290,6 @@ void MiniwinRenderBackend::ClearScene(
 	Clear(&rect, p_r, p_g, p_b, p_color, p_depth);
 }
 
-void MiniwinWidescreen_Pillarbox()
-{
-	auto* backend = ScreenBackend();
-	if (backend && backend->WidescreenActive()) {
-		backend->DrawSideBars();
-	}
-}
-
 bool MiniwinWidescreen_MapUI(float p_nx, float p_ny, int p_width, int p_height, long* p_x, long* p_y)
 {
 	auto* backend = ScreenBackend();

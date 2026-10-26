@@ -7,8 +7,6 @@ void MiniwinWidescreen_Set(bool p_enabled);
 bool MiniwinWidescreen_Get();
 bool MiniwinWidescreen_Active();
 float MiniwinWidescreen_RaceAspect(bool p_splitScreen);
-// Cover race-world side panels while the pause menu uses the centred UI.
-void MiniwinWidescreen_Pillarbox();
 
 // [library:3d] Everything defaults to UI. Race-world submission (and full-width
 // screen fades) open this scope; End restores the phase that was active when it
