@@ -2,13 +2,16 @@
 
 cbuffer FragmentUniforms : register(b0)
 {
-    int _17_uColorOp : packoffset(c0);
-    int _17_uAlphaOp : packoffset(c0.y);
-    int _17_uSpecular : packoffset(c0.z);
-    int _17_uAlphaFunc : packoffset(c0.w);
-    float _17_uAlphaRef : packoffset(c1);
-    int _17_uColorKey : packoffset(c1.y);
-    float2 _17_uPad : packoffset(c1.z);
+    int _12_uColorOp : packoffset(c0);
+    int _12_uAlphaOp : packoffset(c0.y);
+    int _12_uSpecular : packoffset(c0.z);
+    int _12_uAlphaFunc : packoffset(c0.w);
+    float _12_uAlphaRef : packoffset(c1);
+    int _12_uColorKey : packoffset(c1.y);
+    float2 _12_uPad : packoffset(c1.z);
+    float4 _12_uPointOriginStep : packoffset(c2);
+    float2 _12_uPointCount : packoffset(c3);
+    float2 _12_uPointPad : packoffset(c3.z);
 };
 
 Texture2D<float4> uTexture : register(t0);
@@ -33,127 +36,141 @@ struct SPIRV_Cross_Output
 
 void frag_main()
 {
-    float4 sampled = 1.0f.xxxx;
-    bool _23 = _17_uColorOp != 2;
-    bool _31;
-    if (!_23)
-    {
-        _31 = _17_uAlphaOp != 2;
-    }
-    else
-    {
-        _31 = _23;
-    }
-    if (_31)
-    {
-        sampled = uTexture.Sample(_uTexture_sampler, vUV);
-    }
-    bool _46 = _17_uColorKey != 0;
-    bool _56;
-    if (_46)
-    {
-        _56 = sampled.w < 0.5f;
-    }
-    else
-    {
-        _56 = _46;
-    }
-    if (_56)
+    if (_12_uPointCount.x < 0.0f)
     {
         discard;
     }
-    float3 _66;
-    if (_17_uColorOp == 0)
+    float4 sampled = 1.0f.xxxx;
+    bool _34 = _12_uColorOp != 2;
+    bool _42;
+    if (!_34)
     {
-        _66 = vColor.xyz * sampled.xyz;
+        _42 = _12_uAlphaOp != 2;
     }
     else
     {
-        float3 _80;
-        if (_17_uColorOp == 1)
+        _42 = _34;
+    }
+    if (_42)
+    {
+        float2 uv = vUV;
+        float2 dx = ddx(vUV);
+        float2 dy = ddy(vUV);
+        if (_12_uPointCount.x > 0.0f)
         {
-            _80 = sampled.xyz;
+            float2 pixel = floor(((uv - _12_uPointOriginStep.xy) / _12_uPointOriginStep.zw) + 0.5f.xx);
+            uv = _12_uPointOriginStep.xy + (clamp(pixel, 0.0f.xx, _12_uPointCount - 1.0f.xx) * _12_uPointOriginStep.zw);
+            dx = float2(_12_uPointOriginStep.z, 0.0f);
+            dy = float2(0.0f, _12_uPointOriginStep.w);
+        }
+        sampled = uTexture.SampleGrad(_uTexture_sampler, uv, dx, dy);
+    }
+    bool _113 = _12_uColorKey != 0;
+    bool _120;
+    if (_113)
+    {
+        _120 = sampled.w < 0.5f;
+    }
+    else
+    {
+        _120 = _113;
+    }
+    if (_120)
+    {
+        discard;
+    }
+    float3 _130;
+    if (_12_uColorOp == 0)
+    {
+        _130 = vColor.xyz * sampled.xyz;
+    }
+    else
+    {
+        float3 _144;
+        if (_12_uColorOp == 1)
+        {
+            _144 = sampled.xyz;
         }
         else
         {
-            _80 = vColor.xyz;
+            _144 = vColor.xyz;
         }
-        _66 = _80;
+        _130 = _144;
     }
     float4 color;
-    color.x = _66.x;
-    color.y = _66.y;
-    color.z = _66.z;
-    float _102;
-    if (_17_uAlphaOp == 0)
+    color.x = _130.x;
+    color.y = _130.y;
+    color.z = _130.z;
+    float _164;
+    if (_12_uAlphaOp == 0)
     {
-        _102 = vColor.w * sampled.w;
+        _164 = vColor.w * sampled.w;
     }
     else
     {
-        float _115;
-        if (_17_uAlphaOp == 1)
+        float _177;
+        if (_12_uAlphaOp == 1)
         {
-            _115 = sampled.w;
+            _177 = sampled.w;
         }
         else
         {
-            _115 = vColor.w;
+            _177 = vColor.w;
         }
-        _102 = _115;
+        _164 = _177;
     }
-    color.w = _102;
-    if (_17_uSpecular != 0)
+    color.w = _164;
+    if (_12_uSpecular != 0)
     {
-        float4 _134 = color;
-        float3 _136 = _134.xyz + vSpecular.xyz;
-        color.x = _136.x;
-        color.y = _136.y;
-        color.z = _136.z;
+        float4 _196 = color;
+        float3 _198 = _196.xyz + vSpecular.xyz;
+        color.x = _198.x;
+        color.y = _198.y;
+        color.z = _198.z;
     }
-    if (_17_uAlphaFunc != 0)
+    if (_12_uAlphaFunc != 0)
     {
         float a = color.w;
         bool _pass = true;
-        if (_17_uAlphaFunc == 1)
+        if (_12_uAlphaFunc == 1)
         {
             _pass = false;
         }
         else
         {
-            if (_17_uAlphaFunc == 2)
+            if (_12_uAlphaFunc == 2)
             {
-                _pass = a < _17_uAlphaRef;
+                _pass = a < _12_uAlphaRef;
             }
             else
             {
-                if (_17_uAlphaFunc == 3)
+                if (_12_uAlphaFunc == 3)
                 {
-                    _pass = a == _17_uAlphaRef;
+                    _pass = a == _12_uAlphaRef;
                 }
                 else
                 {
-                    if (_17_uAlphaFunc == 4)
+                    if (_12_uAlphaFunc == 4)
                     {
-                        _pass = a <= _17_uAlphaRef;
+                        _pass = a <= _12_uAlphaRef;
                     }
                     else
                     {
-                        if (_17_uAlphaFunc == 5)
+                        if (_12_uAlphaFunc == 5)
                         {
-                            _pass = a > _17_uAlphaRef;
+                            _pass = a > _12_uAlphaRef;
                         }
                         else
                         {
-                            if (_17_uAlphaFunc == 6)
+                            if (_12_uAlphaFunc == 6)
                             {
-                                _pass = a != _17_uAlphaRef;
+                                _pass = a != _12_uAlphaRef;
                             }
                             else
                             {
-                                if (_17_uAlphaFunc == 7)
+                                if (_12_uAlphaFunc == 7)
                                 {
-                                    _pass = a >= _17_uAlphaRef;
+                                    _pass = a >= _12_uAlphaRef;
                                 }
                             }
                         }
