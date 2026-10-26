@@ -8,6 +8,7 @@
 #include "menu/menugamecontext.h"
 #include "menu/menuscreencreateparams.h"
 
+#include <miniwin/resetcontrols.h>
 #include <string.h>
 
 DECOMP_SIZE_ASSERT(ControlConfigScreen, 0x3360)
@@ -36,6 +37,8 @@ ControlConfigScreen::ControlConfigScreen()
 // FUNCTION: LEGORACERS 0x0047a6b0
 ControlConfigScreen::~ControlConfigScreen()
 {
+	// [library:input] Release the extra button before its screen and resources.
+	MiniwinResetControls_Destroy();
 	Destroy();
 }
 
@@ -81,6 +84,8 @@ void ControlConfigScreen::CreateWidgets()
 	}
 
 	CreateTextButton(&m_backButton, 0x3f, 0x46, 0x1e);
+	// [library:input] Append a localized reset button to the navigation tree.
+	MiniwinResetControls_Create(this, m_menuTextStrings, m_context->m_context->m_languageIndex);
 }
 
 // FUNCTION: LEGORACERS 0x0047a930
@@ -197,6 +202,8 @@ void ControlConfigScreen::OnIconUnfocused(MenuWidget* p_source)
 		m_navPending = TRUE;
 	}
 
+	// [library:input] Reset the displayed device, unless a binding is being captured.
+	MiniwinResetControls_Activate(p_source, m_context, m_devices, m_bindingIndices, m_selectedDevice, m_awaitingButton);
 	m_clickedWidget = p_source;
 }
 
