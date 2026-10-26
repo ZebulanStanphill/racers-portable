@@ -6,6 +6,7 @@
 #include "miniwin.h"
 
 #include <miniwin/dinput.h>
+#include <miniwin/gamepad.h>
 #include <miniwin/miniwinapp.h>
 #include <miniwin/widescreen.h>
 #include <stdio.h>
@@ -510,7 +511,7 @@ static const struct {
 // button i - 2, so this order picks the defaults: accelerate A, brake B, power-up X,
 // camera Y, HUD LB, powerslide RB, look back View. The D-pad has no entries: it is
 // folded into the left stick. The names must stay short: with the axis names they have to fit NameBudget.
-static const struct {
+static constexpr struct {
 	SDL_GamepadButton m_button;
 	const char* m_name;
 } g_joystickButtons[] = {
@@ -531,6 +532,9 @@ static const struct {
 	{SDL_GAMEPAD_BUTTON_LEFT_PADDLE1, "P3"},
 	{SDL_GAMEPAD_BUTTON_LEFT_PADDLE2, "P4"},
 };
+
+// The indices the game hooks use (miniwin/gamepad.h) must stay in step with the table.
+static_assert(g_joystickButtons[MINIWIN_GAMEPAD_BUTTON_MENU].m_button == SDL_GAMEPAD_BUTTON_START, "Menu index");
 
 struct MiniwinInputDevice;
 
