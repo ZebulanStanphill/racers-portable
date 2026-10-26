@@ -23,7 +23,8 @@ DECOMP_SIZE_ASSERT(InputBindingState, 0xd0)
 DECOMP_SIZE_ASSERT(PersistentGameState, 0x42c)
 
 // GLOBAL: LEGORACERS 0x004b0624
-const LegoU32 g_keyboardInputBindingEvents[3][9] = {
+// [library:input] Share keyboard defaults with the controls-screen reset adapter.
+extern const LegoU32 g_keyboardInputBindingEvents[3][9] = {
 	{
 		InputDevice::c_sourceKeyboard | 0xcb,
 		InputDevice::c_sourceKeyboard | 0xcd,
