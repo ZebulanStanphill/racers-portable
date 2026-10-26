@@ -154,6 +154,7 @@ typedef ptrdiff_t GLintptr;
 	GL3_FUNC(void, glUniform1i, (GLint location, GLint v0))                                                            \
 	GL3_FUNC(void, glUniform1f, (GLint location, GLfloat v0))                                                          \
 	GL3_FUNC(void, glUniform2f, (GLint location, GLfloat v0, GLfloat v1))                                              \
+	GL3_FUNC(void, glUniform4f, (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3))                      \
 	GL3_FUNC(void, glGenVertexArrays, (GLsizei n, GLuint * arrays))                                                    \
 	GL3_FUNC(void, glBindVertexArray, (GLuint array))                                                                  \
 	GL3_FUNC(void, glGenBuffers, (GLsizei n, GLuint * buffers))                                                        \

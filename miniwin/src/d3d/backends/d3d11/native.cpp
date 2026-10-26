@@ -123,8 +123,11 @@ struct FragmentUniforms {
 	float alphaRef;
 	Sint32 colorKey;
 	float pad[2];
+	float pointOriginStep[4];
+	float pointCount[2];
+	float pointPad[2];
 };
-static_assert(sizeof(VertexUniforms) == 16 && sizeof(FragmentUniforms) == 32, "HLSL constant buffer packing");
+static_assert(sizeof(VertexUniforms) == 16 && sizeof(FragmentUniforms) == 64, "HLSL constant buffer packing");
 
 struct Texture {
 	ComPtr<ID3D11Texture2D> resource;
@@ -639,6 +642,10 @@ bool MiniwinD3D11Native::Impl::Draw(
 		p_state.colorKey,
 		{0.f, 0.f}
 	};
+	SDL_memcpy(fu.pointOriginStep, p_state.pointOriginStep, sizeof(fu.pointOriginStep));
+	if (sceneW > p_logicalW || sceneH > p_logicalH) {
+		SDL_memcpy(fu.pointCount, p_state.pointCount, sizeof(fu.pointCount));
+	}
 	if (!pipeline ||
 		!Upload(vertices, p_vertices, p_vertexCount * sizeof(MiniwinD3D11Vertex), D3D11_BIND_VERTEX_BUFFER) ||
 		(p_indices && !Upload(indices, p_indices, p_indexCount * sizeof(Uint16), D3D11_BIND_INDEX_BUFFER)) ||

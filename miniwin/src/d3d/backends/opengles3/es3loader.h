@@ -150,6 +150,7 @@ typedef ptrdiff_t GLintptr;
 	ES3_FUNC(void, glUniform1i, (GLint location, GLint v0))                                                            \
 	ES3_FUNC(void, glUniform1f, (GLint location, GLfloat v0))                                                          \
 	ES3_FUNC(void, glUniform2f, (GLint location, GLfloat v0, GLfloat v1))                                              \
+	ES3_FUNC(void, glUniform4f, (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3))                      \
 	ES3_FUNC(void, glGenVertexArrays, (GLsizei n, GLuint * arrays))                                                    \
 	ES3_FUNC(void, glBindVertexArray, (GLuint array))                                                                  \
 	ES3_FUNC(void, glGenBuffers, (GLsizei n, GLuint * buffers))                                                        \
