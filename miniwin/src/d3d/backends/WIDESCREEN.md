@@ -16,9 +16,10 @@ draw is tagged when it is submitted:
   centred 4:3 region of the wide scene (`UIWidthFraction()`, offset
   `(1 - fraction) * 640 / 2`); y is untouched. Aspect, fonts and the sample lattice
   are exactly those of a 4:3 window of the same height.
-- **World**: content drawn inside a `MiniwinWorldScope`. It leaves logical x
-  untouched, so 0..640 spans the whole wide scene. Scopes nest: leaving one restores
-  the phase that was active when it began.
+- **World**: the race scene and full-screen fades. A `MiniwinWorldScope` in
+  `RaceSession::Draw` (and in `DrawFullWidthFades` for the fade quads) leaves
+  logical x untouched, so 0..640 spans the whole wide scene. Scopes nest: leaving one
+  restores the phase that was active when it began.
 
 The tag is read at submission time and copied into the recorded vertices, never at
 replay: SDL_GPU records every draw/clear and replays them in `Present`, so no global
@@ -33,7 +34,9 @@ the centred region is exactly 640 wide (`--resolution original`).
 (removing a previous race frame from the side panels) and fills only the centred
 region with a non-black colour. `PresentScene` ends a frame; if the frame drew the
 world, the next frame that draws only UI paints the side panels black before its
-first draw (`ClearStaleSideBars`).
+first draw (`ClearStaleSideBars`). The pause menu's dimming backdrop
+is drawn in a world scope too (`RaceDialog::Draw`), so it dims the whole widened view
+while its text stays in the centred UI.
 
 `--resolution original` renders a 480-high scene whose width is `480 * aspect`,
 rounded so that its difference from 640 is even; the centred UI then lands on whole
@@ -49,6 +52,14 @@ published through SDL's global properties (`racers.miniwin.widescreen`, see
 `_RaceAspect`, `_MapUI`) use the backend that last presented (the DLL's
 renderer), not the exe's own `MiniwinBackend_Get()` (the intro-video backend). The
 scale mode and render resolution are not shared this way yet.
+
+## Race cameras
+
+`RaceSession::Draw` sets each race camera's aspect to the window aspect, or twice that
+in Versus (each half is 640x240). The vertical field of view (including the Versus
+-25 degrees and per-frame FOV animation) is untouched, so framing is unchanged and
+`GolCameraBase::ComputeFrustum` widens with the projection: culling matches the view
+and nothing pops in at the side edges. Menu and cutscene cameras are not touched.
 
 ## Input
 
