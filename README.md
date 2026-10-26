@@ -31,7 +31,7 @@ Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AV
 
 On a gamepad, the D-pad works like the left stick: it moves through menus and steers in races.
 
-Default gamepad race controls follow an Xbox controller: steer with the left stick or D-pad, accelerate with A, brake with B, power-up with X, camera with Y, cycle the HUD with LB, powerslide with RB, and look back with View. Controls you reassigned on a gamepad before this layout was introduced now refer to different buttons; reassign them on the controls screen.
+Default gamepad race controls follow an Xbox controller: steer with the left stick or D-pad, accelerate with A, brake with X, power-up with LB, camera with Y, powerslide with RB, look back with B, and cycle the HUD with View. Saved controls are never changed: a profile that already saved its gamepad controls keeps them, so reassign them on the controls screen to get this layout. Controls you reassigned on a gamepad before the Xbox button order was introduced now refer to different buttons.
 
 Menu (Start) pauses a race. With the pause menu open it closes it again, choosing Continue (or "No" in a confirmation). Assigning a race action to Menu on the controls screen takes priority over pausing.
 

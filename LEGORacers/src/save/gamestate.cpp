@@ -10,6 +10,7 @@
 #include "save/activerecordbuffer.h"
 #include "save/savegame.h"
 
+#include <miniwin/gamepad.h>
 #include <string.h>
 #include <windows.h>
 
@@ -146,7 +147,9 @@ void GameState::InitializeInputBindings(InputManager* p_inputManager)
 			}
 
 			for (LegoS32 button = 2; button < joystick->GetButtonCountFast(); button++) {
-				entry->m_events[button] = InputDevice::c_sourceJoystickButton | (button - 2);
+				// [library:input] The gamepad's default race layout, per race action slot.
+				LegoS32 index = MiniwinGamepad_DefaultRaceButton(button);
+				entry->m_events[button] = InputDevice::c_sourceJoystickButton | (index >= 0 ? index : button - 2);
 			}
 		}
 	}

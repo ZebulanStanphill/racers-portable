@@ -15,3 +15,9 @@
 // The menus' logical joystick code for back (and delete in a joystick name field).
 // MenuInputHandler remaps B to it, while every other button stays the select code 4.
 #define MINIWIN_GAMEPAD_MENU_BACK 5
+
+// The default joystick binding of a race action slot (GameState::InitializeInputBindings):
+// the game's slots 2 to 8 are accelerate, brake, power-up, camera, HUD, powerslide and look
+// back, and this returns the raw button index of the Xbox layout (A, X, LB, Y, View, RB, B).
+// Other slots return -1, which keeps the original one-button-per-slot order.
+int MiniwinGamepad_DefaultRaceButton(int p_slot);
