@@ -5,9 +5,51 @@
 #include <miniwin/widescreen.h>
 #include <vector>
 
-static bool g_widescreen;
-// Draw phase, captured per submitted draw: UI (default) or race world.
-static bool g_world;
+// On Windows and Xbox the game is two modules (LEGORacers.exe and GolDP.dll) that each
+// statically link their own copy of miniwin, so a plain static here would be two
+// variables: the exe sets the preference and the world scope while the DLL's renderer
+// reads its own, unset copy. State both modules need lives in one block published
+// through SDL's global properties (SDL itself is a single shared library). It is
+// allocated once and intentionally never freed.
+struct SharedState {
+	SDL_AtomicInt widescreen;
+	// Draw phase, captured per submitted draw: UI (default) or race world.
+	SDL_AtomicInt world;
+	// The backend that last presented, i.e. the one the player sees. The exe's own
+	// MiniwinBackend_Get() may be a different (intro video) backend.
+	void* backend;
+};
+
+static SharedState* g_shared;
+
+static SharedState* Shared()
+{
+	if (!g_shared) {
+		SDL_PropertiesID props = SDL_GetGlobalProperties();
+		SDL_LockProperties(props);
+		auto* shared = (SharedState*) SDL_GetPointerProperty(props, "racers.miniwin.widescreen", nullptr);
+		if (!shared) {
+			shared = (SharedState*) SDL_calloc(1, sizeof(SharedState));
+			SDL_SetPointerProperty(props, "racers.miniwin.widescreen", shared);
+		}
+		SDL_UnlockProperties(props);
+		g_shared = shared;
+	}
+	return g_shared;
+}
+
+// The backend the player sees, else this module's own.
+static MiniwinRenderBackend* ScreenBackend()
+{
+	auto* backend = (MiniwinRenderBackend*) SDL_GetAtomicPointer(&Shared()->backend);
+	return backend ? backend : MiniwinBackend_Get();
+}
+
+MiniwinRenderBackend::~MiniwinRenderBackend()
+{
+	SDL_CompareAndSwapAtomicPointer(&Shared()->backend, this, nullptr);
+}
+
 // A world draw or clear happened since the last present, and the side panels may
 // still hold wide-world pixels that a UI-only frame must not leave behind.
 static bool g_worldFrame;
@@ -31,7 +73,7 @@ void MiniwinWidescreen_Load()
 	if (PrefPath(path, sizeof(path))) {
 		void* data = SDL_LoadFile(path, nullptr);
 		if (data) {
-			g_widescreen = SDL_strcmp((const char*) data, "on") == 0;
+			SDL_SetAtomicInt(&Shared()->widescreen, SDL_strcmp((const char*) data, "on") == 0);
 			SDL_free(data);
 		}
 	}
@@ -39,7 +81,7 @@ void MiniwinWidescreen_Load()
 
 void MiniwinWidescreen_Set(bool p_enabled)
 {
-	g_widescreen = p_enabled;
+	SDL_SetAtomicInt(&Shared()->widescreen, p_enabled);
 	char path[1024];
 	if (PrefPath(path, sizeof(path))) {
 		const char* value = p_enabled ? "on" : "off";
@@ -49,23 +91,24 @@ void MiniwinWidescreen_Set(bool p_enabled)
 
 bool MiniwinWidescreen_Get()
 {
-	return g_widescreen;
+	return SDL_GetAtomicInt(&Shared()->widescreen) != 0;
 }
 
 bool MiniwinRenderBackend::WidescreenActive() const
 {
-	return g_widescreen && m_drawableH > 0 && (float) m_drawableW / (float) m_drawableH > c_uiAspect;
+	return SDL_GetAtomicInt(&Shared()->widescreen) && m_drawableH > 0 &&
+		   (float) m_drawableW / (float) m_drawableH > c_uiAspect;
 }
 
 bool MiniwinWidescreen_Active()
 {
-	auto* backend = MiniwinBackend_Get();
+	auto* backend = ScreenBackend();
 	return backend && backend->WidescreenActive();
 }
 
 float MiniwinWidescreen_RaceAspect(bool p_splitScreen)
 {
-	auto* backend = MiniwinBackend_Get();
+	auto* backend = ScreenBackend();
 	float aspect =
 		MiniwinWidescreen_Active() ? (float) backend->m_drawableW / (float) backend->m_drawableH : c_uiAspect;
 	return p_splitScreen ? 2.f * aspect : aspect;
@@ -73,8 +116,7 @@ float MiniwinWidescreen_RaceAspect(bool p_splitScreen)
 
 MiniwinWorldScope::MiniwinWorldScope()
 {
-	m_previous = g_world;
-	g_world = true;
+	m_previous = SDL_SetAtomicInt(&Shared()->world, 1) != 0;
 }
 
 MiniwinWorldScope::~MiniwinWorldScope()
@@ -85,7 +127,7 @@ MiniwinWorldScope::~MiniwinWorldScope()
 void MiniwinWorldScope::End()
 {
 	if (!m_ended) {
-		g_world = m_previous;
+		SDL_SetAtomicInt(&Shared()->world, m_previous);
 		m_ended = true;
 	}
 }
@@ -141,6 +183,7 @@ float MiniwinRenderBackend::UIWidthFraction() const
 
 void MiniwinRenderBackend::PresentScene()
 {
+	SDL_SetAtomicPointer(&Shared()->backend, this);
 	Present();
 	g_barsDirty = g_barsDirty || (g_worldFrame && WidescreenActive());
 	g_worldFrame = false;
@@ -182,13 +225,14 @@ void MiniwinRenderBackend::SubmitTriangles(
 	Uint32 p_indexCount
 )
 {
-	if (g_world || !WidescreenActive()) {
-		g_worldFrame = g_worldFrame || g_world;
+	bool world = SDL_GetAtomicInt(&Shared()->world) != 0;
+	if (world || !WidescreenActive()) {
+		g_worldFrame = g_worldFrame || world;
 		DrawTriangles(p_state, p_vertices, p_vertexCount, p_indices, p_indexCount);
 		return;
 	}
 	ClearStaleSideBars();
-	// SDL_GPU copies these into its staging list now. Replay never consults g_world
+	// SDL_GPU copies these into its staging list now. Replay never consults the world flag
 	// or the preference, and caller-owned vertex buffers remain untouched.
 	static std::vector<D3DTLVERTEX> vertices;
 	vertices.assign(p_vertices, p_vertices + p_vertexCount);
@@ -219,8 +263,9 @@ void MiniwinRenderBackend::ClearScene(
 	bool p_depth
 )
 {
-	if (g_world || !WidescreenActive()) {
-		g_worldFrame = g_worldFrame || g_world;
+	bool world = SDL_GetAtomicInt(&Shared()->world) != 0;
+	if (world || !WidescreenActive()) {
+		g_worldFrame = g_worldFrame || world;
 		Clear(p_rect, p_r, p_g, p_b, p_color, p_depth);
 		return;
 	}
@@ -247,7 +292,7 @@ void MiniwinRenderBackend::ClearScene(
 
 void MiniwinWidescreen_Pillarbox()
 {
-	auto* backend = MiniwinBackend_Get();
+	auto* backend = ScreenBackend();
 	if (backend && backend->WidescreenActive()) {
 		backend->DrawSideBars();
 	}
@@ -255,7 +300,7 @@ void MiniwinWidescreen_Pillarbox()
 
 bool MiniwinWidescreen_MapUI(float p_nx, float p_ny, int p_width, int p_height, long* p_x, long* p_y)
 {
-	auto* backend = MiniwinBackend_Get();
+	auto* backend = ScreenBackend();
 	float x = p_nx * (float) p_width;
 	float y = p_ny * (float) p_height;
 	if (backend && backend->m_vpW > 0 && backend->m_vpH > 0) {

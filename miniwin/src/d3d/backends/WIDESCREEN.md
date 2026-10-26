@@ -40,6 +40,17 @@ and covers the panels explicitly (`MiniwinWidescreen_Pillarbox`).
 rounded so that its difference from 640 is even; the centred UI then lands on whole
 scene pixels and stays a 1:1 640x480 blit.
 
+## Two modules (Windows, Xbox)
+
+There LEGORacers.exe and GolDP.dll each statically link their own copy of miniwin, so
+a plain static is two variables (macOS/Linux happen to merge them). The preference,
+the world flag and the "backend on screen" pointer therefore live in one block
+published through SDL's global properties (`racers.miniwin.widescreen`, see
+`widescreen.cpp`). The exe-facing functions (`MiniwinWidescreen_Active`,
+`_RaceAspect`, `_Pillarbox`, `_MapUI`) use the backend that last presented (the DLL's
+renderer), not the exe's own `MiniwinBackend_Get()` (the intro-video backend). The
+scale mode and render resolution are not shared this way yet.
+
 ## Race cameras
 
 `RaceSession::Draw` sets each race camera's aspect to the window aspect, or twice that

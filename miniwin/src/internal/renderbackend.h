@@ -44,7 +44,8 @@ struct MiniwinRasterState {
 
 class MiniwinRenderBackend {
 public:
-	virtual ~MiniwinRenderBackend() = default;
+	// Out of line (widescreen.cpp): clears the process-shared "backend on screen" pointer.
+	virtual ~MiniwinRenderBackend();
 
 	virtual bool Init(SDL_Window* p_window) = 0;
 	virtual void Resize(int p_width, int p_height) = 0;
