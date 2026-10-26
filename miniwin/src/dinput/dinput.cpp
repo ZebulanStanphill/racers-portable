@@ -729,6 +729,20 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 		DIJOYSTATE2* state = (DIJOYSTATE2*) lpvData;
 		state->lX = ScaleAxis(SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTX));
 		state->lY = ScaleAxis(SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_LEFTY));
+
+		// [library:input] Menus treat every joystick button as select and navigate only
+		// with axes, so fold the D-pad into the left stick and suppress its buttons below.
+		bool left = SDL_GetGamepadButton(m_gamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT);
+		bool right = SDL_GetGamepadButton(m_gamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
+		bool up = SDL_GetGamepadButton(m_gamepad, SDL_GAMEPAD_BUTTON_DPAD_UP);
+		bool down = SDL_GetGamepadButton(m_gamepad, SDL_GAMEPAD_BUTTON_DPAD_DOWN);
+		if (left != right) {
+			state->lX = left ? m_rangeMin : m_rangeMax;
+		}
+		if (up != down) {
+			state->lY = up ? m_rangeMin : m_rangeMax;
+		}
+
 		state->lRx = ScaleAxis(SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTX));
 		state->lRy = ScaleAxis(SDL_GetGamepadAxis(m_gamepad, SDL_GAMEPAD_AXIS_RIGHTY));
 
@@ -743,6 +757,9 @@ struct MiniwinInputDevice : public IDirectInputDevice2A {
 		state->rgdwPOV[3] = 0xFFFFFFFF;
 
 		for (int i = 0; i < 16; i++) {
+			if (i >= SDL_GAMEPAD_BUTTON_DPAD_UP && i <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+				continue; // Leave these slots zeroed without renumbering other buttons.
+			}
 			state->rgbButtons[i] = SDL_GetGamepadButton(m_gamepad, (SDL_GamepadButton) i) ? 0x80 : 0x00;
 		}
 
