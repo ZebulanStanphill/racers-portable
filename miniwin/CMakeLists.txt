@@ -19,6 +19,7 @@ add_library(miniwin STATIC
 
   # Render backend selection/dispatch (always compiled)
   src/d3d/backends/backends.cpp
+  src/d3d/backends/widescreen.cpp
   src/d3d/backends/overlay.cpp
 
   # DirectSound

@@ -107,7 +107,7 @@ struct MiniwinD3DDevice : public IDirect3DDevice3 {
 			vertex.sx += 0.5f;
 			vertex.sy += 0.5f;
 		}
-		backend->DrawTriangles(p_state, m_vertexScratch.data(), p_vertexCount, p_indices, p_indexCount);
+		backend->SubmitTriangles(p_state, m_vertexScratch.data(), p_vertexCount, p_indices, p_indexCount);
 	}
 
 	MiniwinRasterState BuildState()
@@ -478,17 +478,18 @@ HRESULT IDirect3DViewport3::Clear(DWORD dwCount, LPD3DRECT lpRects, DWORD dwFlag
 		b = material->m_material.diffuse.b;
 	}
 
-	SDL_Rect rect;
-	SDL_Rect* rectPtr = nullptr;
-	if (dwCount >= 1 && lpRects) {
-		rect.x = lpRects[0].x1;
-		rect.y = lpRects[0].y1;
-		rect.w = lpRects[0].x2 - lpRects[0].x1;
-		rect.h = lpRects[0].y2 - lpRects[0].y1;
-		rectPtr = &rect;
+	bool color = (dwFlags & D3DCLEAR_TARGET) != 0;
+	bool depth = (dwFlags & D3DCLEAR_ZBUFFER) != 0;
+	if (dwCount && lpRects) {
+		for (DWORD i = 0; i < dwCount; i++) {
+			SDL_Rect rect =
+				{lpRects[i].x1, lpRects[i].y1, lpRects[i].x2 - lpRects[i].x1, lpRects[i].y2 - lpRects[i].y1};
+			backend->ClearScene(&rect, r, g, b, color, depth);
+		}
 	}
-
-	backend->Clear(rectPtr, r, g, b, (dwFlags & D3DCLEAR_TARGET) != 0, (dwFlags & D3DCLEAR_ZBUFFER) != 0);
+	else {
+		backend->ClearScene(nullptr, r, g, b, color, depth);
+	}
 	return D3D_OK;
 }
 

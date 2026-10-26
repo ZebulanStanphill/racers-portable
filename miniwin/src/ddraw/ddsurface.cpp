@@ -105,7 +105,7 @@ HRESULT MiniwinSurface::Blt(
 	if (dwFlags & DDBLT_COLORFILL) {
 		// Fill of the 3D render target (usually black). Only a full clear is used.
 		if (backend && lpDDBltFx) {
-			backend->Clear(nullptr, 0.f, 0.f, 0.f, true, false);
+			backend->ClearScene(nullptr, 0.f, 0.f, 0.f, true, false);
 		}
 		return DD_OK;
 	}
@@ -117,7 +117,7 @@ HRESULT MiniwinSurface::Blt(
 		if (source->m_pixelsDirty) {
 			source->CompositeToBackend(backend);
 		}
-		backend->Present();
+		backend->PresentScene();
 	}
 
 	return DD_OK;
@@ -134,7 +134,7 @@ HRESULT MiniwinSurface::Flip(LPDIRECTDRAWSURFACE lpDDSurfaceTargetOverride, DWOR
 		if (m_pixelsDirty) {
 			CompositeToBackend(backend);
 		}
-		backend->Present();
+		backend->PresentScene();
 	}
 	return DD_OK;
 }
@@ -193,7 +193,7 @@ void MiniwinSurface::CompositeToBackend(MiniwinRenderBackend* p_backend)
 	state.textureWrap = false;
 	state.colorOp = MiniwinTextureOp::Texture;
 	state.alphaOp = MiniwinTextureOp::Texture;
-	p_backend->DrawTriangles(state, vertices, 4, indices, 6);
+	p_backend->SubmitTriangles(state, vertices, 4, indices, 6);
 }
 
 HRESULT MiniwinSurface::GetAttachedSurface(LPDDSCAPS2 lpDDSCaps, LPDIRECTDRAWSURFACE* lplpDDAttachedSurface)

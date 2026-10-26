@@ -600,7 +600,7 @@ void MiniwinBackend_Relaunch(MiniwinBackendId p_backend)
 	args.push_back(exe);
 	bool hasNoVideo = false;
 	for (int i = 1; i < g_argc; i++) {
-		if (SDL_strcmp(g_argv[i], "--renderer") == 0) {
+		if (SDL_strcmp(g_argv[i], "--renderer") == 0 || SDL_strcmp(g_argv[i], "--widescreen") == 0) {
 			i++; // also skip its value
 			continue;
 		}
@@ -728,9 +728,9 @@ void MiniwinBackend_PresentVideoFrame(SDL_Window* p_window, const void* p_rgba, 
 
 	const Uint16 indices[6] = {0, 1, 2, 2, 1, 3};
 
-	backend->Clear(nullptr, 0.0f, 0.0f, 0.0f, true, false);
-	backend->DrawTriangles(state, quad, 4, indices, 6);
-	backend->Present();
+	backend->ClearScene(nullptr, 0.0f, 0.0f, 0.0f, true, false);
+	backend->SubmitTriangles(state, quad, 4, indices, 6);
+	backend->PresentScene();
 }
 
 // --- Screenshot hook (shared by the backends' Present) ---

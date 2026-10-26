@@ -400,35 +400,13 @@ void MiniwinGles3Backend::UpdateViewport()
 	if (dw <= 0 || dh <= 0 || m_width <= 0 || m_height <= 0) {
 		return;
 	}
-	m_drawableW = dw;
-	m_drawableH = dh;
-
-	int vpW = dw;
-	int vpH = dh;
-	if (MiniwinGetScaleMode() == MINIWIN_SCALE_LETTERBOX) {
-		vpH = (int) ((float) dw * (float) m_height / (float) m_width);
-		if (vpH > dh) {
-			vpH = dh;
-			vpW = (int) ((float) dh * (float) m_width / (float) m_height);
-		}
-	}
-	int vpX = (dw - vpW) / 2;
-	int vpY = (dh - vpH) / 2;
-
-	if (vpX != m_vpX || vpY != m_vpY || vpW != m_vpW || vpH != m_vpH) {
-		m_vpX = vpX;
-		m_vpY = vpY;
-		m_vpW = vpW;
-		m_vpH = vpH;
+	if (UpdatePresentation(dw, dh)) {
 		m_borderClearFrames = 3;
 	}
-
-	if (MiniwinGetRenderResolution() == MINIWIN_RESOLUTION_ORIGINAL) {
-		EnsureSceneFbo(m_width, m_height);
-	}
-	else {
-		EnsureSceneFbo(dw, dh);
-	}
+	int width;
+	int height;
+	SceneSize(width, height);
+	EnsureSceneFbo(width, height);
 
 	gl.glViewport(0, 0, m_sceneFboW, m_sceneFboH);
 }

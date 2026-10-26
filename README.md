@@ -24,6 +24,7 @@ Place the built `LEGORacers` executable next to the game's data files (`LEGO.JAM
 - `--renderer sdlgpu|opengl3|opengles3|d3d11` — select the render backend: SDL3 GPU (default; Vulkan/Metal/Direct3D 12), OpenGL 3.3, OpenGL ES 3.0 / WebGL2, or native Direct3D 11 (Windows; feature level 10.0+). It can also be changed in-game under Options → Video (the game relaunches to apply it; on Xbox, restart the app manually).
 - `--scale letterbox|stretch` — fullscreen scaling: keep the 4:3 aspect ratio with black bars (default) or fill the screen.
 - `--resolution native|original` — render 3D at the display resolution (default) or at the game's original 640x480, upscaled. Point-sampled 2D blits preserve their original sample footprint at native resolution; see the [D3D6 rasterization notes](miniwin/src/d3d/backends/RASTERIZATION.md).
+- `--widescreen on|off` — use the whole window or display when it is wider than 4:3, instead of letterboxing it (default off, remembered like the renderer). Menus, loading screens, movies and the HUD keep their original proportions, centred between black bars. It overrides `--scale stretch`, and looks identical to off in a 4:3 or taller window. See the [widescreen notes](miniwin/src/d3d/backends/WIDESCREEN.md).
 - `--language <index>` — seeds the language selection the original stored in the registry.
 
 Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AVIs.
@@ -85,7 +86,7 @@ Copy the files of an installed copy of LEGO Racers into that folder: `LEGO.JAM`,
 
 The Xbox build tries SDL3 GPU first, then falls back to native Direct3D 11 on Xbox One, whose feature level 10.x device cannot initialize SDL_GPU. Xbox Series X|S keep using SDL3 GPU when available. Both paths render the intro videos and game through the same backend.
 
-Saved games and the renderer choice aren't kept with the game files but in the app's own storage, `LocalState\isledecomp\racers\` (in the Device Portal's file explorer: LocalAppData, then the app's package). Updating the app keeps them; uninstalling it deletes them.
+Saved games and the renderer and widescreen choices aren't kept with the game files but in the app's own storage, `LocalState\isledecomp\racers\` (in the Device Portal's file explorer: LocalAppData, then the app's package). Updating the app keeps them; uninstalling it deletes them.
 
 Each launch writes a log, `latest-log.txt`, next to the game files (e.g. `E:\racers\latest-log.txt`), replacing the previous one. If the game files weren't found, their folder can't be written to, or the game failed before it got to them, the log goes to `LocalState\isledecomp\racers\` instead, and the message about the missing files says where. Include it when reporting a problem.
 

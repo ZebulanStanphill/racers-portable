@@ -502,13 +502,7 @@ void MiniwinSdlGpuBackend::EnsureSceneTargets()
 {
 	int width;
 	int height;
-	if (MiniwinGetRenderResolution() == MINIWIN_RESOLUTION_ORIGINAL) {
-		width = m_width;
-		height = m_height;
-	}
-	else {
-		DrawableSize(width, height);
-	}
+	SceneSize(width, height);
 	if (width <= 0 || height <= 0) {
 		width = m_width;
 		height = m_height;
@@ -555,19 +549,7 @@ void MiniwinSdlGpuBackend::UpdateViewport()
 		return;
 	}
 
-	int vpW = dw;
-	int vpH = dh;
-	if (MiniwinGetScaleMode() == MINIWIN_SCALE_LETTERBOX) {
-		vpH = (int) ((float) dw * (float) m_height / (float) m_width);
-		if (vpH > dh) {
-			vpH = dh;
-			vpW = (int) ((float) dh * (float) m_width / (float) m_height);
-		}
-	}
-	m_vpX = (dw - vpW) / 2;
-	m_vpY = (dh - vpH) / 2;
-	m_vpW = vpW;
-	m_vpH = vpH;
+	UpdatePresentation(dw, dh);
 
 	EnsureSceneTargets();
 }
@@ -789,8 +771,37 @@ void MiniwinSdlGpuBackend::EndScene()
 {
 }
 
-void MiniwinSdlGpuBackend::Clear(const SDL_Rect*, float p_r, float p_g, float p_b, bool p_color, bool p_depth)
+void MiniwinSdlGpuBackend::Clear(const SDL_Rect* p_rect, float p_r, float p_g, float p_b, bool p_color, bool p_depth)
 {
+	if (p_rect && (p_rect->x || p_rect->y || p_rect->w != m_width || p_rect->h != m_height)) {
+		if (p_rect->w <= 0 || p_rect->h <= 0) {
+			return;
+		}
+		// A render-pass load clear ignores scissor. Record a depth=1 quad instead;
+		// ZERO/ONE blending preserves color during a depth-only rectangular clear.
+		D3DTLVERTEX vertices[4] = {};
+		Uint32 color = 0xff000000u | ((Uint32) SDL_lroundf(SDL_clamp(p_r, 0.f, 1.f) * 255.f) << 16) |
+					   ((Uint32) SDL_lroundf(SDL_clamp(p_g, 0.f, 1.f) * 255.f) << 8) |
+					   (Uint32) SDL_lroundf(SDL_clamp(p_b, 0.f, 1.f) * 255.f);
+		for (int i = 0; i < 4; i++) {
+			vertices[i].sx = (float) p_rect->x + (i & 1 ? (float) p_rect->w : 0.f);
+			vertices[i].sy = (float) p_rect->y + (i & 2 ? (float) p_rect->h : 0.f);
+			vertices[i].sz = 1.f;
+			vertices[i].rhw = 1.f;
+			vertices[i].color = color;
+		}
+		MiniwinRasterState state;
+		state.zEnable = p_depth;
+		state.zWrite = p_depth;
+		state.zFunc = D3DCMP_ALWAYS;
+		state.alphaBlend = !p_color;
+		state.srcBlend = D3DBLEND_ZERO;
+		state.destBlend = D3DBLEND_ONE;
+		const Uint16 indices[] = {0, 1, 2, 2, 1, 3};
+		DrawTriangles(state, vertices, 4, indices, 6);
+		return;
+	}
+
 	GpuCommand command = {};
 	command.m_kind = GpuCommand::Clear;
 	command.m_clearColor = p_color;
