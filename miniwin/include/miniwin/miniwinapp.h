@@ -66,20 +66,21 @@ void MiniwinSound_SetSuspended(bool p_suspended);
 MiniwinRenderResolution MiniwinGetRenderResolution();
 
 // Render backend selection. The backend rasterizes the game's Direct3D output. SDL_GPU
-// is the desktop default, with OpenGL 3.3 as the fallback; OpenGL ES 3 / WebGL2 is the
-// web backend (and an optional desktop one via --renderer opengles3). The value is read
-// before the window is created.
+// is the default, with Direct3D 11 (Windows) then OpenGL 3.3 as fallbacks. OpenGL ES 3 /
+// WebGL2 is the web backend (and an optional desktop one via --renderer opengles3).
+// The value is read before the window is created.
 enum MiniwinBackendId {
 	MINIWIN_BACKEND_SDLGPU = 0,
 	MINIWIN_BACKEND_OPENGL3 = 1,
 	MINIWIN_BACKEND_OPENGLES3 = 2,
+	MINIWIN_BACKEND_D3D11 = 3,
 };
 void MiniwinSetBackend(MiniwinBackendId p_backend);
 MiniwinBackendId MiniwinGetBackend();
 
 // Maps a --renderer name to an id ("sdlgpu"/"gpu"; "opengl3"/"opengl"/"gl";
-// "opengles3"/"gles3"/"gles"/"webgl2"). Returns false on an unknown name (the caller
-// warns and keeps the default).
+// "opengles3"/"gles3"/"gles"/"webgl2"; "d3d11"). Returns false on an unknown name
+// (the caller warns and keeps the default).
 bool MiniwinBackendFromName(const char* p_name, MiniwinBackendId* p_id);
 const char* MiniwinBackendName(MiniwinBackendId p_backend);
 

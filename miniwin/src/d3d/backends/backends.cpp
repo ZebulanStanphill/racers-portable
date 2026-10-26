@@ -28,6 +28,8 @@
 
 #if defined(USE_SDL_GPU)
 static MiniwinBackendId g_activeBackend = MINIWIN_BACKEND_SDLGPU;
+#elif defined(USE_D3D11)
+static MiniwinBackendId g_activeBackend = MINIWIN_BACKEND_D3D11;
 #elif defined(USE_OPENGL3)
 static MiniwinBackendId g_activeBackend = MINIWIN_BACKEND_OPENGL3;
 #else
@@ -38,7 +40,7 @@ static MiniwinBackendId g_resolvedBackend;
 
 // Set per backend when its window/context could not be created this session, so the
 // fallback chain treats it as unavailable from then on.
-static bool g_backendForcedUnusable[3];
+static bool g_backendForcedUnusable[4];
 
 void MiniwinSetBackend(MiniwinBackendId p_backend)
 {
@@ -70,12 +72,18 @@ bool MiniwinBackendFromName(const char* p_name, MiniwinBackendId* p_id)
 		*p_id = MINIWIN_BACKEND_OPENGLES3;
 		return true;
 	}
+	if (SDL_strcasecmp(p_name, "d3d11") == 0) {
+		*p_id = MINIWIN_BACKEND_D3D11;
+		return true;
+	}
 	return false;
 }
 
 const char* MiniwinBackendName(MiniwinBackendId p_backend)
 {
 	switch (p_backend) {
+	case MINIWIN_BACKEND_D3D11:
+		return "d3d11";
 	case MINIWIN_BACKEND_SDLGPU:
 		return "sdlgpu";
 	case MINIWIN_BACKEND_OPENGL3:
@@ -91,6 +99,12 @@ const char* MiniwinBackendName(MiniwinBackendId p_backend)
 static bool BackendCompiled(MiniwinBackendId p_backend)
 {
 	switch (p_backend) {
+	case MINIWIN_BACKEND_D3D11:
+#ifdef USE_D3D11
+		return true;
+#else
+		return false;
+#endif
 	case MINIWIN_BACKEND_SDLGPU:
 #ifdef USE_SDL_GPU
 		return true;
@@ -116,6 +130,12 @@ static bool BackendCompiled(MiniwinBackendId p_backend)
 static bool BackendProbe(MiniwinBackendId p_backend)
 {
 	switch (p_backend) {
+	case MINIWIN_BACKEND_D3D11:
+#ifdef USE_D3D11
+		return MiniwinD3D11_Available();
+#else
+		return false;
+#endif
 	case MINIWIN_BACKEND_SDLGPU:
 #ifdef USE_SDL_GPU
 		return MiniwinSdlGpu_Available();
@@ -142,9 +162,9 @@ static bool BackendProbe(MiniwinBackendId p_backend)
 // backend (enumeration and resolution both consult this).
 static bool BackendUsable(MiniwinBackendId p_backend)
 {
-	static int s_cache[3] = {-1, -1, -1};
+	static int s_cache[4] = {-1, -1, -1, -1};
 	int index = (int) p_backend;
-	if (index < 0 || index >= 3) {
+	if (index < 0 || index >= 4) {
 		return false;
 	}
 	if (g_backendForcedUnusable[index]) {
@@ -164,6 +184,7 @@ bool MiniwinBackendUsable(MiniwinBackendId p_backend)
 // Preference order for fallback when the requested backend is unavailable.
 static const MiniwinBackendId c_fallbackOrder[] = {
 	MINIWIN_BACKEND_SDLGPU,
+	MINIWIN_BACKEND_D3D11,
 	MINIWIN_BACKEND_OPENGL3,
 	MINIWIN_BACKEND_OPENGLES3,
 };
@@ -226,6 +247,10 @@ bool MiniwinBackend_DemoteActiveBackend()
 Uint32 MiniwinBackend_PrepareWindowFlags()
 {
 	switch (ResolveBackend()) {
+#ifdef USE_D3D11
+	case MINIWIN_BACKEND_D3D11:
+		return MiniwinD3D11_PrepareWindowFlags();
+#endif
 #ifdef USE_SDL_GPU
 	case MINIWIN_BACKEND_SDLGPU:
 		return MiniwinSdlGpu_PrepareWindowFlags();
@@ -265,6 +290,11 @@ MiniwinRenderBackend* MiniwinBackend_Acquire(SDL_Window* p_window, int p_width, 
 	g_backendWindow = p_window;
 
 	switch (ResolveBackend()) {
+#ifdef USE_D3D11
+	case MINIWIN_BACKEND_D3D11:
+		g_backend = MiniwinD3D11_Create(p_window, p_width, p_height);
+		break;
+#endif
 #ifdef USE_SDL_GPU
 	case MINIWIN_BACKEND_SDLGPU:
 		g_backend = MiniwinSdlGpu_Create(p_window, p_width, p_height);
@@ -349,9 +379,26 @@ MINIWIN_DEFINE_GUID(
 	0x02
 );
 
+MINIWIN_DEFINE_GUID(
+	MINIWIN_GUID_BackendD3D11,
+	0x682656f3,
+	0x121a,
+	0x4d97,
+	0x9a,
+	0xb2,
+	0xc5,
+	0x88,
+	0x14,
+	0x91,
+	0x01,
+	0x03
+);
+
 const GUID* MiniwinBackendGuid(MiniwinBackendId p_backend)
 {
 	switch (p_backend) {
+	case MINIWIN_BACKEND_D3D11:
+		return &MINIWIN_GUID_BackendD3D11;
 	case MINIWIN_BACKEND_OPENGL3:
 		return &MINIWIN_GUID_BackendOpenGl3;
 	case MINIWIN_BACKEND_OPENGLES3:
@@ -365,6 +412,8 @@ const GUID* MiniwinBackendGuid(MiniwinBackendId p_backend)
 const char* MiniwinBackendDisplayName(MiniwinBackendId p_backend)
 {
 	switch (p_backend) {
+	case MINIWIN_BACKEND_D3D11:
+		return "Direct3D 11";
 	case MINIWIN_BACKEND_SDLGPU:
 		return "SDL3 GPU";
 	case MINIWIN_BACKEND_OPENGL3:
@@ -379,6 +428,10 @@ bool MiniwinBackendFromGuid(const GUID* p_guid, MiniwinBackendId* p_id)
 {
 	if (!p_guid || !p_id) {
 		return false;
+	}
+	if (*p_guid == MINIWIN_GUID_BackendD3D11) {
+		*p_id = MINIWIN_BACKEND_D3D11;
+		return true;
 	}
 	if (*p_guid == MINIWIN_GUID_BackendSdlGpu) {
 		*p_id = MINIWIN_BACKEND_SDLGPU;
@@ -408,6 +461,7 @@ int MiniwinBackend_EnumDrivers(MiniwinBackendId* p_out, int p_max)
 	MiniwinBackendId ordered[] = {
 		ResolveBackend(),
 		MINIWIN_BACKEND_SDLGPU,
+		MINIWIN_BACKEND_D3D11,
 		MINIWIN_BACKEND_OPENGL3,
 		MINIWIN_BACKEND_OPENGLES3,
 	};
@@ -510,6 +564,15 @@ static bool ExecutablePath(char* p_path, size_t p_size)
 
 void MiniwinBackend_Relaunch(MiniwinBackendId p_backend)
 {
+#ifdef WINDOWS_STORE
+	// UWP cannot re-exec. CreateDevice has already saved the selected renderer.
+	SDL_LogInfo(
+		LOG_CATEGORY_MINIWIN,
+		"renderer '%s' saved; restart the app to apply it",
+		MiniwinBackendName(p_backend)
+	);
+	return;
+#endif
 	char exe[4096];
 	if (g_argc <= 0 || !ExecutablePath(exe, sizeof(exe))) {
 		SDL_LogError(LOG_CATEGORY_MINIWIN, "cannot relaunch: no saved command line / executable path");
@@ -568,9 +631,8 @@ void MiniwinBackend_Relaunch(MiniwinBackendId p_backend)
 	char** argv = args.data();
 	MiniwinApp_RunOnMainThread([&exe, argv]() {
 #if defined(__EMSCRIPTEN__) || defined(WINDOWS_STORE)
-		// No process re-exec in the browser or a UWP app (no _exec*); only one backend is
-		// compiled there so this path is unreachable. A future software renderer would reload
-		// the page instead on the web.
+		// No process re-exec in the browser or a UWP app (no _exec*). The saved
+		// renderer choice takes effect on the next manual launch on UWP.
 		(void) exe;
 		(void) argv;
 #elif defined(_WIN32)

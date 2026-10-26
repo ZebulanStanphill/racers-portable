@@ -49,3 +49,10 @@ bool MiniwinGles3_Available();
 Uint32 MiniwinGles3_PrepareWindowFlags();
 MiniwinRenderBackend* MiniwinGles3_Create(SDL_Window* p_window, int p_width, int p_height);
 #endif
+
+#ifdef USE_D3D11
+// Hardware D3D11 feature level 10.0 or newer (probe creates/destroys a device).
+bool MiniwinD3D11_Available();
+Uint32 MiniwinD3D11_PrepareWindowFlags();
+MiniwinRenderBackend* MiniwinD3D11_Create(SDL_Window* p_window, int p_width, int p_height);
+#endif

@@ -2,7 +2,7 @@
 
 // [library:3d] Render backend abstraction for the Direct3D immediate-mode emulation.
 // The game submits pre-transformed D3DTLVERTEX triangles; a backend is a rasterizer
-// state machine (SDL3 GPU / OpenGL 3.3 / OpenGL ES 3).
+// state machine (SDL3 GPU / OpenGL 3.3 / OpenGL ES 3 / Direct3D 11).
 
 #include <SDL3/SDL.h>
 #include <miniwin/d3d.h>

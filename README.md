@@ -21,7 +21,7 @@ We are actively working to support more platforms. If you have experience with a
 
 Place the built `LEGORacers` executable next to the game's data files (`LEGO.JAM`, the `*.TUN` music files, and the intro `*.AVI` movies), or point it at them with `--path <directory>`. The original game's command-line arguments (`-window`, `-novideo`, `-horzres`, `-vertres`, …) are supported, plus:
 
-- `--renderer sdlgpu|opengl3|opengles3` — select the render backend: SDL3 GPU (default; Vulkan/Metal/Direct3D 12), OpenGL 3.3, or OpenGL ES 3.0 / WebGL2. It can also be changed in-game under Options → Video (the game relaunches to apply it).
+- `--renderer sdlgpu|opengl3|opengles3|d3d11` — select the render backend: SDL3 GPU (default; Vulkan/Metal/Direct3D 12), OpenGL 3.3, OpenGL ES 3.0 / WebGL2, or native Direct3D 11 (Windows; feature level 10.0+). It can also be changed in-game under Options → Video (the game relaunches to apply it; on Xbox, restart the app manually).
 - `--scale letterbox|stretch` — fullscreen scaling: keep the 4:3 aspect ratio with black bars (default) or fill the screen.
 - `--resolution native|original` — render 3D at the display resolution (default) or at the game's original 640x480, upscaled.
 - `--language <index>` — seeds the language selection the original stored in the registry.
@@ -41,7 +41,7 @@ To achieve our goal of platform independence, we need to replace any Windows-onl
 | Joystick/Gamepad + Force Feedback, DirectInput (Input) | [SDL3](https://www.libsdl.org/) | ✅ |
 | WinMM (timers), DirectSound (Audio) | [SDL3](https://www.libsdl.org/), [miniaudio](https://miniaud.io/) | ✅ |
 | DirectDraw (2D video) | [SDL3](https://www.libsdl.org/) | ✅ |
-| Direct3D immediate mode (3D rendering) | [SDL3 GPU](https://www.libsdl.org/) (default; Vulkan/Metal/D3D12), OpenGL 3.3, and OpenGL ES 3.0 / WebGL2 | ✅ |
+| Direct3D immediate mode (3D rendering) | [SDL3 GPU](https://www.libsdl.org/) (default; Vulkan/Metal/D3D12), OpenGL 3.3, OpenGL ES 3.0 / WebGL2, and native Direct3D 11 (Windows) | ✅ |
 | DirectShow, Indeo 5 (Video playback) | In-tree AVI demuxer + Indeo 5 decoder (vendored from [FFmpeg](https://ffmpeg.org/) n4.4.4, byte-exact against ffmpeg), [SDL3](https://www.libsdl.org/) | ✅ |
 | Windows Registry (Language selection) | Command line (`--language`) | ✅ |
 
@@ -76,6 +76,8 @@ The Xbox app gets no command line, so it looks for the game files in two folders
 2. `D:\DevelopmentFiles\racers\`: Dev Mode's development files folder, which a PC can reach over the network (SMB) or through the Device Portal's file explorer.
 
 Copy the files of an installed copy of LEGO Racers into that folder: `LEGO.JAM`, the `*.TUN` music files and the intro `*.AVI` movies (so you have e.g. `E:\racers\LEGO.JAM`). If neither folder has them, the game says so and quits.
+
+The Xbox build tries SDL3 GPU first, then falls back to native Direct3D 11 on Xbox One, whose feature level 10.x device cannot initialize SDL_GPU. Xbox Series X|S keep using SDL3 GPU when available. Both paths render the intro videos and game through the same backend.
 
 Saved games and the renderer choice aren't kept with the game files but in the app's own storage, `LocalState\isledecomp\racers\` (in the Device Portal's file explorer: LocalAppData, then the app's package). Updating the app keeps them; uninstalling it deletes them.
 

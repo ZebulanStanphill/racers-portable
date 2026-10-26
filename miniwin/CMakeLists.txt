@@ -39,6 +39,13 @@ endif()
 # only when its entry is present.
 list(APPEND GRAPHICS_BACKENDS USE_SDL_GPU)
 
+# Native D3D11 also supports Xbox One's feature level 10.x hardware.
+if(WIN32)
+  list(APPEND GRAPHICS_BACKENDS USE_D3D11)
+  target_sources(miniwin PRIVATE src/d3d/backends/d3d11/renderer.cpp)
+  include(src/d3d/backends/d3d11/backend.cmake)
+endif()
+
 # Desktop OpenGL 3.3 core. Reached through SDL_GL_GetProcAddress, so no OpenGL library
 # is linked (SDL loads it) — unlike isle's OpenGL 1.x backend. Not available on the web
 # (WebGL/GLES only) or typical console/handheld targets.
