@@ -129,6 +129,9 @@ if (DOWNLOAD_DEPENDENCIES)
       COMMAND "${CMAKE_COMMAND}" "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
         "-DPATCH_FILE=${CMAKE_SOURCE_DIR}/patches/sdl3-uwp-key-state.patch"
         -P "${CMAKE_SOURCE_DIR}/patches/apply-patch.cmake"
+      COMMAND "${CMAKE_COMMAND}" "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+        "-DPATCH_FILE=${CMAKE_SOURCE_DIR}/patches/sdl3-uwp-mouse-buttons.patch"
+        -P "${CMAKE_SOURCE_DIR}/patches/apply-patch.cmake"
     )
   endif()
   set(SDL_TEST_LIBRARY OFF)

@@ -1,0 +1,5 @@
+// SDL3-uwp uses resource 5000 to hide the system cursor without disabling
+// CoreWindow mouse motion. Keep this ID in sync with WINRT_ShowCursor.
+#include <winres.h>
+
+5000 CURSOR "blankcursor.cur"
