@@ -25,6 +25,7 @@
 //                overlay, no dialog cluster, and no menu-cursor clicks into the
 //                exclusive-mode race input.
 
+#include "miniwin.h"
 #include "renderbackend.h"
 #include "touchoverlay.h"
 
@@ -105,7 +106,7 @@ static bool g_dialogPending = false;
 static bool g_textFieldFocused = false;
 static bool g_everTouched = false;
 
-static SDL_Window* g_window = nullptr; // window of the last accepted finger event
+static SDL_Window* g_window = nullptr; // last accepted finger event, or UWP text-input window
 static int g_drawableW = 0;
 static int g_drawableH = 0;
 
@@ -637,21 +638,56 @@ extern "C" EMSCRIPTEN_KEEPALIVE void racers_osk_key(int p_char)
 
 void MiniwinTouch_TextFieldFocus(bool p_focused)
 {
-	// Only ever start SDL text input where touch is actually in use: staying an input
+	// Start SDL text input for touch and UWP's system keyboard: staying an input
 	// method client has caused intermittent macOS window-server stalls during races,
 	// so desktops without touch keep the existing key-event-only path.
-	if (!g_everTouched || !g_window) {
+	bool needsTextInput = g_everTouched;
+#ifdef WINDOWS_STORE
+	needsTextInput = true;
+#endif
+	if (!needsTextInput) {
 		g_textFieldFocused = false;
 		return;
 	}
-	g_textFieldFocused = p_focused;
-	SDL_Window* window = g_window;
-	if (p_focused) {
-		MiniwinApp_RunOnMainThread([window]() { SDL_StartTextInput(window); });
-	}
-	else {
-		MiniwinApp_RunOnMainThread([window]() { SDL_StopTextInput(window); });
-	}
+	bool active = false;
+	MiniwinApp_RunOnMainThread([p_focused, &active]() {
+#ifdef WINDOWS_STORE
+		// On a console no finger event has supplied g_window. Resolve the focused
+		// SDL window on its owning thread, and retain it for the matching stop.
+		if (p_focused) {
+			g_window = SDL_GetKeyboardFocus();
+		}
+		if (!g_window) {
+			SDL_LogInfo(LOG_CATEGORY_MINIWIN, "UWP text input %s: no window", p_focused ? "start" : "stop");
+			return;
+		}
+		// SDL's automatic policy can skip the OSK when a USB keyboard is attached.
+		// Name entry should still request it on the console.
+		SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");
+#endif
+		SDL_Window* window = g_window;
+		if (!window) {
+			return;
+		}
+		bool ok = p_focused ? SDL_StartTextInput(window) : SDL_StopTextInput(window);
+		active = SDL_TextInputActive(window);
+#ifdef WINDOWS_STORE
+		SDL_LogInfo(
+			LOG_CATEGORY_MINIWIN,
+			"UWP text input %s: ok=%d active=%d screen-keyboard=%d shown=%d%s%s",
+			p_focused ? "start" : "stop",
+			(int) ok,
+			(int) active,
+			(int) SDL_HasScreenKeyboardSupport(),
+			(int) SDL_ScreenKeyboardShown(window),
+			ok ? "" : " error=",
+			ok ? "" : SDL_GetError()
+		);
+#else
+		(void) ok;
+#endif
+	});
+	g_textFieldFocused = p_focused && active;
 #ifdef __EMSCRIPTEN__
 	OskFocusBrowser(p_focused);
 #endif
