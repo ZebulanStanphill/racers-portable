@@ -33,6 +33,11 @@ struct MiniwinRasterState {
 	bool textureLinear = true;
 	bool textureWrap = true;
 	bool colorKeyTest = false;
+	// Optional original-resolution point-sample lattice for screen-aligned 2D quads.
+	// xy = UV at the first covered D3D6 pixel centre; zw = UV per logical pixel.
+	// Zero disables it; negative means no covered samples. Only device draws set it.
+	float pointOriginStep[4] = {};
+	float pointCount[2] = {};
 	MiniwinTextureOp colorOp = MiniwinTextureOp::Modulate;
 	MiniwinTextureOp alphaOp = MiniwinTextureOp::Modulate;
 };

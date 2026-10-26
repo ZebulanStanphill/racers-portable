@@ -18,15 +18,32 @@ layout(set = 3, binding = 0) uniform FragmentUniforms {
 	float uAlphaRef;
 	int uColorKey;  // discard fragments whose sampled texture alpha is keyed out
 	vec2 uPad;
+	vec4 uPointOriginStep;
+	vec2 uPointCount;
+	vec2 uPointPad;
 };
 
 layout(location = 0) out vec4 oColor;
 
 void main()
 {
+	if (uPointCount.x < 0.0) {
+		discard;
+	}
 	vec4 sampled = vec4(1.0);
 	if (uColorOp != 2 || uAlphaOp != 2) {
-		sampled = texture(uTexture, vUV);
+		// Quantize only affine point-sampled 2D quads to their covered D3D6
+		// integer centres. Clamp so magnification never samples a neighbouring cell.
+		vec2 uv = vUV;
+		vec2 dx = dFdx(vUV), dy = dFdy(vUV);
+		if (uPointCount.x > 0.0) {
+			vec2 pixel = floor((uv - uPointOriginStep.xy) / uPointOriginStep.zw + 0.5);
+			uv = uPointOriginStep.xy + clamp(pixel, vec2(0.0), uPointCount - 1.0) * uPointOriginStep.zw;
+			// Keep the original logical-pixel LOD as well as the original UV samples.
+			dx = vec2(uPointOriginStep.z, 0.0);
+			dy = vec2(0.0, uPointOriginStep.w);
+		}
+		sampled = textureGrad(uTexture, uv, dx, dy);
 	}
 
 	if (uColorKey != 0 && sampled.a < 0.5) {
