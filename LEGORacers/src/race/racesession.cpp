@@ -2225,9 +2225,6 @@ void RaceSession::Draw()
 
 	// [library:3d] HUD, standings and pause widgets use the centred 4:3 UI.
 	world.End();
-	if (m_pauseState) {
-		MiniwinWidescreen_Pillarbox();
-	}
 	m_renderer->DisableZBuffer(FALSE);
 
 	switch (m_state) {
