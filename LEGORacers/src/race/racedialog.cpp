@@ -5,6 +5,8 @@
 #include "render/gold3drenderdevice.h"
 #include "surface/golrendertarget.h"
 
+#include <miniwin/widescreen.h>
+
 DECOMP_SIZE_ASSERT(RaceDialog, 0x68)
 
 extern LegoFloat g_cosineTable[1024];
@@ -143,7 +145,11 @@ void RaceDialog::Draw()
 	}
 
 	const GolRenderTarget* renderTargetInfo = m_renderer->GetRenderTargetInfo();
-	DrawBackdrop();
+	{
+		// [library:3d] The dimming backdrop covers the whole widened view, like screen fades.
+		MiniwinWorldScope world;
+		DrawBackdrop();
+	}
 
 	LegoS32 selectedAlpha = c_selectedAlpha;
 	if (m_selecting) {
