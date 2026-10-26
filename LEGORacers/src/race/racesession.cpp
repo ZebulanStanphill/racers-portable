@@ -36,6 +36,7 @@
 
 #include <memory.h>
 #include <miniwin/touch.h>
+#include <miniwin/widescreen.h>
 #include <mmsystem.h>
 #include <stdio.h>
 #include <string.h>
@@ -2118,6 +2119,15 @@ void RaceSession::Draw()
 		return;
 	}
 
+	// [library:3d] Widen race projection and culling together; leave animated FOV intact.
+	LegoFloat aspect = MiniwinWidescreen_RaceAspect(m_splitScreen != 0);
+	for (LegoU32 i = 0; i < m_context->m_playerCount; i++) {
+		if (m_cameras[i]->m_aspectRatio != aspect) {
+			m_cameras[i]->SetAspectRatio(aspect);
+		}
+	}
+	MiniwinWorldScope world;
+
 	GolAppEventHandler::OnCloseRequested();
 	m_renderer->SetCamera(m_cameras[0]);
 	ClearViewport();
@@ -2212,6 +2222,11 @@ void RaceSession::Draw()
 		m_renderer->SelectViewport(FALSE);
 	}
 
+	// [library:3d] HUD, standings and pause widgets use the centred 4:3 UI.
+	world.End();
+	if (m_pauseState) {
+		MiniwinWidescreen_Pillarbox();
+	}
 	m_renderer->DisableZBuffer(FALSE);
 
 	switch (m_state) {
@@ -2278,11 +2293,18 @@ void RaceSession::DrawRacerViewportForState5(Racer* p_racer)
 	DrawTransparent();
 }
 
+// [library:3d] Screen fades cover the whole widened view, not just the centred 4:3 UI.
+static void DrawFullWidthFades(MenuAnimationList& p_list, GolD3DRenderDevice* p_renderer)
+{
+	MiniwinWorldScope world;
+	p_list.Draw(p_renderer);
+}
+
 // FUNCTION: LEGORACERS 0x004357e0
 void RaceSession::DrawOverlaysForState1()
 {
 	DrawDemoText();
-	m_animationList.Draw(m_renderer);
+	DrawFullWidthFades(m_animationList, m_renderer);
 	DrawPauseDialog();
 }
 
@@ -2291,7 +2313,7 @@ void RaceSession::DrawOverlaysForState2()
 {
 	DrawHuds();
 	DrawDemoText();
-	m_animationList.Draw(m_renderer);
+	DrawFullWidthFades(m_animationList, m_renderer);
 	DrawPauseDialog();
 }
 
@@ -2301,7 +2323,7 @@ void RaceSession::DrawOverlaysForState3()
 	DrawHuds();
 	DrawDemoText();
 	GolAppEventHandler::OnCloseRequested();
-	m_animationList.Draw(m_renderer);
+	DrawFullWidthFades(m_animationList, m_renderer);
 	DrawPauseDialog();
 }
 
@@ -2318,7 +2340,7 @@ void RaceSession::DrawOverlaysForState4()
 	}
 
 	DrawDemoText();
-	m_animationList.Draw(m_renderer);
+	DrawFullWidthFades(m_animationList, m_renderer);
 	DrawPauseDialog();
 }
 
@@ -2330,7 +2352,7 @@ void RaceSession::DrawOverlaysForState5()
 	}
 
 	DrawDemoText();
-	m_animationList.Draw(m_renderer);
+	DrawFullWidthFades(m_animationList, m_renderer);
 	DrawPauseDialog();
 }
 
