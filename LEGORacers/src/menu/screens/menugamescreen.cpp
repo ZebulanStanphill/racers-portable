@@ -11,6 +11,7 @@
 #include "racer/carpartcarousel.h"
 #include "render/gold3drenderdevice.h"
 
+#include <miniwin/gamepad.h>
 #include <string.h>
 
 DECOMP_SIZE_ASSERT(MenuGameScreen, 0x368)
@@ -151,7 +152,15 @@ undefined4 MenuGameScreen::CreateTextButton(
 
 	createParams.m_stringTable = m_menuTextStrings;
 	createParams.m_stringId = p_stringId;
-	return p_source->Create(&createParams, styleEntry);
+	undefined4 result = p_source->Create(&createParams, styleEntry);
+
+	// [library:input] Every screen makes its Back button from name index 0x3f; the gamepad's B
+	// presses it (the menus remap B to this code, see MenuInputHandler::MapAllJoystickButtons).
+	if (p_event == 0x3f) {
+		p_source->SetHotkey(InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_MENU_BACK);
+	}
+
+	return result;
 }
 
 // FUNCTION: LEGORACERS 0x0047fec0
