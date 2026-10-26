@@ -1,13 +1,11 @@
 // [library:config] Localized Video Options row built from copied OPTIONS.MIB
 // bindings. It owns its carousel/labels; gameplay selectors and bindings are untouched.
 #include "menu/screens/optionsscreen.h"
+#include "menulanguage.h"
 
 #include <miniwin/widescreen.h>
 #include <miniwin/widescreenoptions.h>
 #include <string.h>
-
-// The menu text folder table GameState uses (languages 0 to 8).
-extern const LegoChar* g_menuLanguageDirectories[9];
 
 namespace
 {
@@ -70,9 +68,7 @@ const wchar_t* RowLabel(unsigned int p_languageIndex)
 		{"spanish", L"PANTALLA PANOR\u00c1MICA"},
 		{"swedish", L"BREDBILD"},
 	};
-	// Index 10 (registry LangID 0x000b) is Finnish, which the menu folder table lacks.
-	const char* folder = p_languageIndex < 9 ? g_menuLanguageDirectories[p_languageIndex]
-											 : (p_languageIndex == 10 ? "finnish" : "english");
+	const char* folder = MiniwinMenuLanguageFolder(p_languageIndex);
 	for (const auto& label : labels) {
 		if (strcmp(folder, label.folder) == 0) {
 			return label.text;

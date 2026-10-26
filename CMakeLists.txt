@@ -220,7 +220,8 @@ set_property(TARGET goldp PROPERTY OUTPUT_NAME "GolDP")
 # LEGORacers.exe
 if (RACERS_BUILD_APP)
   add_executable(legoracers WIN32 ${LEGORACERS_SOURCES} ${COMMON_SOURCES}
-    miniwin/src/game/widescreenoptions.cpp)
+    miniwin/src/game/widescreenoptions.cpp
+    miniwin/src/game/resetcontrols.cpp)
   target_compile_definitions(legoracers PRIVATE BUILDING_LEGORACERS DIRECTINPUT_VERSION=0x500)
   target_include_directories(legoracers PRIVATE
     "${PROJECT_SOURCE_DIR}/LEGORacers/include"

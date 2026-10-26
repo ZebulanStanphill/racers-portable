@@ -29,7 +29,7 @@ Place the built `LEGORacers` executable next to the game's data files (`LEGO.JAM
 
 Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AVIs.
 
-Default gamepad race controls follow an Xbox controller: steer with the left stick or D-pad, accelerate with A, brake with X, power-up with LB, camera with Y, powerslide with RB, look back with B, and cycle the HUD with View. Saved controls are never changed: a profile that already saved its gamepad controls keeps them, so reassign them on the controls screen to get this layout. Controls you reassigned on a gamepad before the Xbox button order was introduced now refer to different buttons.
+Default gamepad race controls follow an Xbox controller: steer with the left stick or D-pad, accelerate with A, brake with X, power-up with LB, camera with Y, powerslide with RB, look back with B, and cycle the HUD with View. Existing profiles keep their saved gamepad controls; use **Reset Controls** on the Player 1 or Player 2 Controls screen to get this layout. Reset Controls restores the defaults for the device or keyboard set currently shown in the carousel; joystick steering stays unchanged. Controls you reassigned on a gamepad before the Xbox button order was introduced now refer to different buttons.
 
 Menu (Start) pauses a race. With the pause menu open it closes it again, choosing Continue (or "No" in a confirmation). Assigning a race action to Menu on the controls screen takes priority over pausing.
 
