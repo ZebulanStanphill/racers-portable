@@ -33,6 +33,8 @@ Default gamepad race controls follow an Xbox controller: steer with the left sti
 
 Menu (Start) pauses a race. With the pause menu open it closes it again, choosing Continue (or "No" in a confirmation). Assigning a race action to Menu on the controls screen takes priority over pausing.
 
+B goes back: in menus it presses the screen's Back button (A and the other buttons still select), and with the pause menu open it resumes like Menu does. During a race B is an ordinary button. On the controls screen, B and Menu can be assigned like any other button.
+
 The right stick moves the visible menu cursor, with finer control near the center; A selects the focused item, and race controls keep their existing stick bindings.
 
 ## Library substitutions
