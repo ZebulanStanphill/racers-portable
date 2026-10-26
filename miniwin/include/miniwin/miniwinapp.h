@@ -32,6 +32,19 @@ void MiniwinInput_InjectMouseButton(bool p_down);
 // non-zero, and hover is what arms the widget a tap then clicks. Game thread.
 void MiniwinInput_InjectMouseMotion(long p_dx, long p_dy);
 
+// Menu cursor only: raw right-stick motion in logical pixels, with a radial dead
+// zone and elapsed-time speed. The menu hook applies it through its mouse-axis
+// cursor/hover path, including in windowed/web mode where buffered relative mouse
+// motion alone cannot position the cursor. Pass false when hidden/disabled or
+// owned by touch; this clears fractional motion. Joystick state is unchanged.
+bool MiniwinInput_GetMenuGamepadMotion(
+	Uint32 p_elapsedMs,
+	int p_logicalWidth,
+	bool p_cursorActive,
+	long* p_dx,
+	long* p_dy
+);
+
 // Runs a callable synchronously on the main thread (window management must happen
 // there on some platforms). Safe to call from the main thread itself.
 template <typename F>

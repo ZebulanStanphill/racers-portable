@@ -12,6 +12,7 @@
 
 #include <memory.h>
 #include <miniwin/miniwinapp.h>
+#include <miniwin/touch.h>
 
 DECOMP_SIZE_ASSERT(MenuInputDispatcher, 0x60)
 DECOMP_SIZE_ASSERT(MenuInputDispatcher::Cursor::InitStruct, 0x24)
@@ -286,6 +287,28 @@ LegoS32 MenuInputDispatcher::Update(undefined4 p_elapsedMs)
 		// never real fullscreen -- relies on the absolute path.
 		if ((m_drawState->m_flags & GolDrawState::c_flagHardwareDevice) && MiniwinApp_IsWindowFullscreen()) {
 			m_cursor.UpdatePosition(p_elapsedMs);
+		}
+
+		// [library:input] Right-stick motion belongs only to the active menu cursor.
+		// Reuse its mouse-axis cursor/hover path, separately from real motion so
+		// windowed absolute mouse positioning cannot double-count either delta.
+		long dx;
+		long dy;
+		if (MiniwinInput_GetMenuGamepadMotion(
+				p_elapsedMs,
+				m_screenWidth,
+				m_cursor.IsCursorEnabled() && m_cursor.m_isCursorVisible && !MiniwinTouch_MenuCursorActive(),
+				&dx,
+				&dy
+			)) {
+			LegoFloat mouseX = mouse->GetAxisValue(1);
+			LegoFloat mouseY = mouse->GetAxisValue(2);
+			mouse->SetAxisValue(1, (LegoFloat) dx);
+			mouse->SetAxisValue(2, (LegoFloat) dy);
+			m_cursor.UpdatePosition(p_elapsedMs);
+			DispatchMouseMove(mouse);
+			mouse->SetAxisValue(1, mouseX);
+			mouse->SetAxisValue(2, mouseY);
 		}
 	}
 

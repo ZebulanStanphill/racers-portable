@@ -30,6 +30,8 @@ Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AV
 
 On a gamepad, the D-pad works like the left stick: it moves through menus and steers in races.
 
+The right stick moves the visible menu cursor, with finer control near the center; A selects the focused item, and race controls keep their existing stick bindings.
+
 ## Library substitutions
 
 To achieve our goal of platform independence, we need to replace any Windows-only libraries with platform-independent alternatives. This ensures that our codebase remains versatile and compatible across various systems. The following table serves as an overview of major libraries / subsystems and their chosen replacements.
