@@ -1,0 +1,62 @@
+WinRT still passes SDL2's pressed=0/released=1 values to SDL3's bool down
+parameter. Correct the edge polarity so Backspace/Enter/Escape work, and
+recognize those system-keyboard keys when no hardware scan code is supplied.
+Applies to SDL3-uwp 3fa5bba61a84a5c96ec37d8c6a82ab645fbc20ce.
+
+diff --git a/src/video/winrt/SDL_winrtkeyboard.cpp b/src/video/winrt/SDL_winrtkeyboard.cpp
+index f330667..11cef51 100644
+--- a/src/video/winrt/SDL_winrtkeyboard.cpp
++++ b/src/video/winrt/SDL_winrtkeyboard.cpp
+@@ -52,6 +52,22 @@ static SDL_Scancode WINRT_TranslateKeycode(Windows::System::VirtualKey virtualKe
+     // Pack scan code into one byte to make the index.
+     index = LOBYTE(scanCode) | (HIBYTE(scanCode) ? 0x80 : 0x00);
+     code = windows_scancode_table[index];
++    // The system keyboard can send editing keys without a hardware scan code.
++    if (code == SDL_SCANCODE_UNKNOWN) {
++        switch (virtualKey) {
++        case Windows::System::VirtualKey::Back:
++            code = SDL_SCANCODE_BACKSPACE;
++            break;
++        case Windows::System::VirtualKey::Enter:
++            code = SDL_SCANCODE_RETURN;
++            break;
++        case Windows::System::VirtualKey::Escape:
++            code = SDL_SCANCODE_ESCAPE;
++            break;
++        default:
++            break;
++        }
++    }
+     *rawcode = scanCode;
+ 
+     return code;
+@@ -61,25 +77,25 @@ void WINRT_ProcessAcceleratorKeyActivated(Windows::UI::Core::AcceleratorKeyEvent
+ {
+     using namespace Windows::UI::Core;
+ 
+-    Uint8 state;
++    bool down;
+     SDL_Scancode code;
+     Uint16 rawcode = 0;
+ 
+     switch (args->EventType) {
+     case CoreAcceleratorKeyEventType::SystemKeyDown:
+     case CoreAcceleratorKeyEventType::KeyDown:
+-        state = 0;
++        down = true;
+         break;
+     case CoreAcceleratorKeyEventType::SystemKeyUp:
+     case CoreAcceleratorKeyEventType::KeyUp:
+-        state = 1;
++        down = false;
+         break;
+     default:
+         return;
+     }
+ 
+     code = WINRT_TranslateKeycode(args->VirtualKey, args->KeyStatus, &rawcode);
+-    SDL_SendKeyboardKey(0, SDL_DEFAULT_KEYBOARD_ID, rawcode, code, state);
++    SDL_SendKeyboardKey(0, SDL_DEFAULT_KEYBOARD_ID, rawcode, code, down);
+ }
+ 
+ void WINRT_ProcessCharacterReceivedEvent(SDL_Window *window, Windows::UI::Core::CharacterReceivedEventArgs ^ args)
