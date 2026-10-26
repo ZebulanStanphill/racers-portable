@@ -12,7 +12,8 @@
 # The tile and splash images go at the package root, where the manifest's image
 # references point. Source file properties are directory-scoped, so they are set
 # in the legoracers target's directory.
-file(GLOB UWP_ASSET_FILES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/*.png")
+file(GLOB UWP_ASSET_FILES CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/assets/*.png" "${CMAKE_CURRENT_SOURCE_DIR}/assets/*.jpg")
 set_source_files_properties(${UWP_ASSET_FILES}
   TARGET_DIRECTORY legoracers
   PROPERTIES VS_DEPLOYMENT_CONTENT 1
