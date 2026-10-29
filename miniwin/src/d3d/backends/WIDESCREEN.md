@@ -65,9 +65,21 @@ the window while image and text visuals keep the centred UI layout.
 camera viewport covers the whole render target. `CutsceneMenuAnimationEvent`
 activates these quads without a camera rectangle, so they cover the full target:
 this includes victory camera flashes and fade-to-black transitions. Their alpha,
-colour and timing are unchanged. Embedded menu previews and prerecorded AVI movies
-retain their original framing. Authored
+colour and timing are unchanged. Embedded menu previews retain their original framing. Authored
 cutscenes can reveal content beyond the original 4:3 composition.
+
+## Startup movies
+
+Video bypasses UI mapping and uses the entire drawable as its presentation canvas,
+even with race widescreen off. The picture is aspect-fitted, so any remaining bars
+are required by its aspect ratio rather than a second 4:3 container. `VideoPlayer`
+supplies fixed apertures for the stock 640x480 movies: `introcmp.avi` uses rows
+40..439 (640x400), and `hvscmp.avi` uses rows 64..415 (640x352, conservatively
+retaining a few matte pixels). These encoded bands were checked across both local
+game data sets. Fixed apertures avoid zoom changes during dark scenes and fades.
+Other sizes and the 4:3 `lmicmp.avi` use their entire frame. No video assets change.
+The temporary backend video presentation flag is cleared after each present;
+normal menu/race presentation resumes with the next frame.
 
 ## Input
 

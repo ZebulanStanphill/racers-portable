@@ -28,6 +28,9 @@ Place the built `LEGORacers` executable next to the game's data files (`LEGO.JAM
 - `--language <index>` — seeds the language selection the original stored in the registry.
 
 Alt+Enter toggles fullscreen. The intro movies play from the original Indeo 5 AVIs.
+Startup movies fit their visible picture to the display without stretching, independently
+of the race widescreen setting. The stock main intro and HVS animation have encoded
+top/bottom mattes removed; the 4:3 LEGO logo keeps side bars on a wide display.
 
 On a gamepad, the D-pad works like the left stick: it moves through menus and steers in races.
 

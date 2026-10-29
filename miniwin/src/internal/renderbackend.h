@@ -97,6 +97,8 @@ public:
 	// The logical render size the game targets (e.g. 640x480).
 	int m_width = 640;
 	int m_height = 480;
+	// Video fits its visible picture to the entire drawable, independently of race widescreen.
+	bool m_videoPresentation = false;
 
 	// Present-time drawable geometry: the full drawable size and the letterboxed rect
 	// the scene is composited into, in drawable pixels. Refreshed by each backend

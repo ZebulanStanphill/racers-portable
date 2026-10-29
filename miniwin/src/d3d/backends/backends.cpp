@@ -646,7 +646,13 @@ void MiniwinBackend_Relaunch(MiniwinBackendId p_backend)
 
 // --- Video presentation through the active backend ---
 
-void MiniwinBackend_PresentVideoFrame(SDL_Window* p_window, const void* p_rgba, int p_width, int p_height)
+void MiniwinBackend_PresentVideoFrame(
+	SDL_Window* p_window,
+	const void* p_rgba,
+	int p_width,
+	int p_height,
+	const SDL_Rect* p_content
+)
 {
 	MiniwinRenderBackend* backend = MiniwinBackend_Acquire(p_window, p_width, p_height);
 	if (!backend || !p_rgba || p_width <= 0 || p_height <= 0) {
@@ -671,20 +677,33 @@ void MiniwinBackend_PresentVideoFrame(SDL_Window* p_window, const void* p_rgba, 
 		backend->UpdateTexture(s_texture, p_width, p_height, p_rgba, false);
 	}
 
-	// Fit the frame into the logical render rect preserving its aspect ratio (all
-	// shipped movies match the logical 640x480, so this is normally a full-rect quad).
-	// The backend letterboxes the logical rect into the window at present time.
+	SDL_Rect content = p_content ? *p_content : SDL_Rect{0, 0, p_width, p_height};
+	if (content.x < 0 || content.y < 0 || content.w <= 0 || content.h <= 0 || content.x + content.w > p_width ||
+		content.y + content.h > p_height) {
+		content = {0, 0, p_width, p_height};
+	}
+	// Fit in physical screen space, then express the quad in the logical lattice.
+	// Bypass the centred UI transform and the race's 4:3 presentation preference.
+	int dw = backend->m_drawableW;
+	int dh = backend->m_drawableH;
+	if (dw <= 0 || dh <= 0) {
+		MiniwinApp_RunOnMainThread([&]() { SDL_GetWindowSizeInPixels(p_window, &dw, &dh); });
+	}
+	if (dw <= 0 || dh <= 0) {
+		return;
+	}
+	backend->m_videoPresentation = true;
 	float logicalW = (float) backend->m_width;
 	float logicalH = (float) backend->m_height;
-	float logicalAspect = logicalW / logicalH;
-	float frameAspect = (float) p_width / (float) p_height;
+	float screenAspect = (float) dw / (float) dh;
+	float frameAspect = (float) content.w / (float) content.h;
 	float quadW = logicalW;
 	float quadH = logicalH;
-	if (frameAspect > logicalAspect) {
-		quadH = logicalW / frameAspect;
+	if (frameAspect > screenAspect) {
+		quadH = logicalH * screenAspect / frameAspect;
 	}
 	else {
-		quadW = logicalH * frameAspect;
+		quadW = logicalW * frameAspect / screenAspect;
 	}
 	float x0 = (logicalW - quadW) * 0.5f;
 	float y0 = (logicalH - quadH) * 0.5f;
@@ -698,22 +717,26 @@ void MiniwinBackend_PresentVideoFrame(SDL_Window* p_window, const void* p_rgba, 
 		vertex.color = 0xFFFFFFFF;
 		vertex.specular = 0;
 	}
+	float u0 = (float) content.x / (float) p_width;
+	float v0 = (float) content.y / (float) p_height;
+	float u1 = (float) (content.x + content.w) / (float) p_width;
+	float v1 = (float) (content.y + content.h) / (float) p_height;
 	quad[0].sx = x0;
 	quad[0].sy = y0;
-	quad[0].tu = 0.0f;
-	quad[0].tv = 0.0f;
+	quad[0].tu = u0;
+	quad[0].tv = v0;
 	quad[1].sx = x1;
 	quad[1].sy = y0;
-	quad[1].tu = 1.0f;
-	quad[1].tv = 0.0f;
+	quad[1].tu = u1;
+	quad[1].tv = v0;
 	quad[2].sx = x0;
 	quad[2].sy = y1;
-	quad[2].tu = 0.0f;
-	quad[2].tv = 1.0f;
+	quad[2].tu = u0;
+	quad[2].tv = v1;
 	quad[3].sx = x1;
 	quad[3].sy = y1;
-	quad[3].tu = 1.0f;
-	quad[3].tv = 1.0f;
+	quad[3].tu = u1;
+	quad[3].tv = v1;
 
 	MiniwinRasterState state;
 	state.zEnable = false;
@@ -728,9 +751,10 @@ void MiniwinBackend_PresentVideoFrame(SDL_Window* p_window, const void* p_rgba, 
 
 	const Uint16 indices[6] = {0, 1, 2, 2, 1, 3};
 
-	backend->ClearScene(nullptr, 0.0f, 0.0f, 0.0f, true, false);
-	backend->SubmitTriangles(state, quad, 4, indices, 6);
+	backend->Clear(nullptr, 0.0f, 0.0f, 0.0f, true, false);
+	backend->DrawTriangles(state, quad, 4, indices, 6);
 	backend->PresentScene();
+	backend->m_videoPresentation = false;
 }
 
 // --- Screenshot hook (shared by the backends' Present) ---

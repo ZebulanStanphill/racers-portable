@@ -121,9 +121,15 @@ Uint32 MiniwinBackend_PrepareWindowFlags();
 bool MiniwinBackend_DemoteActiveBackend();
 
 // Presents one decoded video frame (tightly packed RGBA8, p_width x p_height) through
-// the active render backend, letterboxed into the window — so intro/cutscene playback
-// uses the selected renderer like the rest of the game. Game thread (VideoPlayer).
-void MiniwinBackend_PresentVideoFrame(SDL_Window* p_window, const void* p_rgba, int p_width, int p_height);
+// the active render backend, aspect-fitted to the whole window independently of UI
+// scaling. Optional content excludes an authored matte. Game thread (VideoPlayer).
+void MiniwinBackend_PresentVideoFrame(
+	SDL_Window* p_window,
+	const void* p_rgba,
+	int p_width,
+	int p_height,
+	const SDL_Rect* p_content = nullptr
+);
 
 // Fullscreen carried from an Alt+Enter during video playback into the game's first
 // display init. The video player records its toggle; Win32GolApp::InitializeDisplay

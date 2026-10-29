@@ -138,7 +138,7 @@ bool MiniwinRenderBackend::UpdatePresentation(int p_dw, int p_dh)
 	m_drawableH = p_dh;
 	int w = p_dw;
 	int h = p_dh;
-	if (!WidescreenActive() && MiniwinGetScaleMode() == MINIWIN_SCALE_LETTERBOX) {
+	if (!m_videoPresentation && !WidescreenActive() && MiniwinGetScaleMode() == MINIWIN_SCALE_LETTERBOX) {
 		h = (int) ((float) p_dw * (float) m_height / (float) m_width);
 		if (h > p_dh) {
 			h = p_dh;

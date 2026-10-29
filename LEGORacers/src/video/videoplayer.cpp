@@ -165,6 +165,17 @@ int VideoPlayer::Play(Win32GolApp* p_golApp, LPCSTR p_filename, int p_abortableO
 
 	int width = (int) reader.GetWidth();
 	int height = (int) reader.GetHeight();
+	// Authored mattes in the stock 640x480 AVIs. Keep a fixed aperture through
+	// fades/dark shots rather than detecting and zooming the picture per frame.
+	SDL_Rect content = {0, 0, width, height};
+	if (width == 640 && height == 480) {
+		if (SDL_strcasecmp(p_filename, "introcmp.avi") == 0) {
+			content = {0, 40, 640, 400};
+		}
+		else if (SDL_strcasecmp(p_filename, "hvscmp.avi") == 0) {
+			content = {0, 64, 640, 352};
+		}
+	}
 	Indeo5Decoder* decoder = Indeo5_Open(width, height);
 	if (!decoder) {
 		return 1;
@@ -229,7 +240,7 @@ int VideoPlayer::Play(Win32GolApp* p_golApp, LPCSTR p_filename, int p_abortableO
 		}
 		frameIndex++;
 
-		MiniwinBackend_PresentVideoFrame(g_video->m_window, g_video->m_rgba, width, height);
+		MiniwinBackend_PresentVideoFrame(g_video->m_window, g_video->m_rgba, width, height, &content);
 
 		// Drain forwarded events: abort on a key or click when allowed. A quit ends
 		// playback and is re-queued for the game loop AFTER the drain — re-pushing
