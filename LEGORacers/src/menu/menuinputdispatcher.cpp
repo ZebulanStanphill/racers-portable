@@ -1,8 +1,12 @@
-#include "menu/menuinputdispatcher.h"
+#ifdef WINDOWS_STORE
+// Include STL before compat.h's legacy keyword macros on MSVC.
+#include <unordered_set>
+#endif
 
 #include "image/golimage.h"
 #include "input/inputmanager.h"
 #include "input/mousedevice.h"
+#include "menu/menuinputdispatcher.h"
 #include "menu/screens/menugamescreen.h"
 #include "menu/screens/menuscreen.h"
 #include "menu/widgets/menuicon.h"
@@ -16,8 +20,6 @@
 #include <miniwin/touch.h>
 
 #ifdef WINDOWS_STORE
-#include <unordered_set>
-
 // [library:input] Keep the Menu press that dismisses text entry consumed until release.
 static std::unordered_set<InputDevice*> g_textEntryMenuButtons;
 #endif
