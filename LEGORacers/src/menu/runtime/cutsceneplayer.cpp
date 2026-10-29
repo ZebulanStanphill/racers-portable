@@ -30,7 +30,9 @@
 #include "render/gold3drenderdevice.h"
 #include "render/golrenderdevice.h"
 #include "render/rectangle.h"
+#include "surface/golrendertarget.h"
 
+#include <miniwin/widescreen.h>
 #include <string.h>
 
 DECOMP_SIZE_ASSERT(CutscenePlayer, 0x228)
@@ -1712,6 +1714,16 @@ void CutscenePlayer::DrawOverlay(GolD3DRenderDevice* p_renderer)
 		}
 
 		if (m_menuAnimations != NULL) {
+			// [library:3d] Cutscene menu animations are full-screen flash/fade effects.
+			// Only widen these quads; image and text visuals retain their UI layout.
+			const Rect& viewport = p_renderer->GetCurrentCamera()->m_viewport;
+			const GolRenderTarget* target = p_renderer->GetRenderTargetInfo();
+			bool wide = MiniwinWidescreen_Active() && viewport.m_left == 0 && viewport.m_top == 0 &&
+						viewport.m_right == target->GetWidth() && viewport.m_bottom == target->GetHeight();
+			MiniwinWorldScope world;
+			if (!wide) {
+				world.End();
+			}
 			m_menuAnimations->Draw(p_renderer);
 		}
 

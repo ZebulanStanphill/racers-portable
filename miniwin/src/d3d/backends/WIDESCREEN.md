@@ -60,8 +60,13 @@ in Versus (each half is 640x240). The vertical field of view (including the Vers
 `GolCameraBase::ComputeFrustum` widens with the projection: culling matches the view
 and nothing pops in at the side edges. Full-screen `SceneWidget` cinematics also
 widen their camera aspect during drawing, then restore it. Their 3D content spans
-the window while text and overlays keep the centred UI layout. Embedded menu
-previews and prerecorded AVI movies retain their original framing. Authored
+the window while image and text visuals keep the centred UI layout.
+`CutscenePlayer::DrawOverlay` widens only its `MenuAnimationList` effects when the
+camera viewport covers the whole render target. `CutsceneMenuAnimationEvent`
+activates these quads without a camera rectangle, so they cover the full target:
+this includes victory camera flashes and fade-to-black transitions. Their alpha,
+colour and timing are unchanged. Embedded menu previews and prerecorded AVI movies
+retain their original framing. Authored
 cutscenes can reveal content beyond the original 4:3 composition.
 
 ## Input
