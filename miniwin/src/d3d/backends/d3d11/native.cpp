@@ -129,6 +129,19 @@ struct FragmentUniforms {
 };
 static_assert(sizeof(VertexUniforms) == 16 && sizeof(FragmentUniforms) == 64, "HLSL constant buffer packing");
 
+// CPU timers deliberately stay off the hot path when diagnostics are disabled.
+struct CpuTimer {
+	Uint64* total;
+	Uint64 start;
+	CpuTimer(Uint64* p_total) : total(p_total), start(p_total ? SDL_GetTicksNS() : 0) {}
+	~CpuTimer()
+	{
+		if (total) {
+			*total += SDL_GetTicksNS() - start;
+		}
+	}
+};
+
 struct Texture {
 	ComPtr<ID3D11Texture2D> resource;
 	ComPtr<ID3D11ShaderResourceView> view;
@@ -172,6 +185,18 @@ struct MiniwinD3D11Native::Impl {
 	std::unordered_map<Uint32, Texture> textures;
 	std::unordered_map<Uint32, Pipeline> pipelines;
 	Texture dummy;
+	VertexUniforms lastVertexUniforms = {};
+	FragmentUniforms lastFragmentUniforms = {};
+	bool haveVertexUniforms = false;
+	bool haveFragmentUniforms = false;
+#ifdef WINDOWS_STORE
+	bool stats = true;
+#else
+	bool stats = SDL_getenv("RACERS_GL_STATS") != nullptr;
+#endif
+	Uint64 statsStart = 0, lastPresent = 0, frameCount = 0, intervalCount = 0;
+	Uint64 intervalTotal = 0, intervalWorst = 0;
+	Uint64 drawCount = 0, uploadCount = 0, uploadNs = 0, drawNs = 0, presentNs = 0;
 	Uint32 nextId = 1;
 	int sceneW = 0, sceneH = 0;
 	int drawableW = 0, drawableH = 0;
@@ -181,6 +206,20 @@ struct MiniwinD3D11Native::Impl {
 	bool MakeTexture(Texture& p_texture, int p_width, int p_height, const void* p_rgba, bool p_mipmaps);
 	bool DynamicBuffer(ComPtr<ID3D11Buffer>& p_buffer, UINT p_bytes, UINT p_bind);
 	bool Upload(ComPtr<ID3D11Buffer>& p_buffer, const void* p_data, UINT p_bytes, UINT p_bind);
+	template <typename T>
+	bool UploadUniform(ComPtr<ID3D11Buffer>& p_buffer, const T& p_value, T& p_cached, bool& p_valid)
+	{
+		if (p_valid && SDL_memcmp(&p_value, &p_cached, sizeof(T)) == 0) {
+			return true;
+		}
+		p_valid = false;
+		if (!Upload(p_buffer, &p_value, sizeof(T), D3D11_BIND_CONSTANT_BUFFER)) {
+			return false;
+		}
+		p_cached = p_value;
+		p_valid = true;
+		return true;
+	}
 	Pipeline* PipelineFor(const MiniwinD3D11State& p_state);
 	bool Draw(
 		const MiniwinD3D11State& p_state,
@@ -540,6 +579,7 @@ bool MiniwinD3D11Native::Impl::DynamicBuffer(ComPtr<ID3D11Buffer>& p_buffer, UIN
 
 bool MiniwinD3D11Native::Impl::Upload(ComPtr<ID3D11Buffer>& p_buffer, const void* p_data, UINT p_bytes, UINT p_bind)
 {
+	CpuTimer timer(stats ? &uploadNs : nullptr);
 	if (!DynamicBuffer(p_buffer, p_bytes, p_bind)) {
 		return false;
 	}
@@ -549,6 +589,9 @@ bool MiniwinD3D11Native::Impl::Upload(ComPtr<ID3D11Buffer>& p_buffer, const void
 	}
 	SDL_memcpy(mapped.pData, p_data, p_bytes);
 	context->Unmap(p_buffer.Get(), 0);
+	if (stats) {
+		uploadCount++;
+	}
 	return true;
 }
 
@@ -622,6 +665,7 @@ bool MiniwinD3D11Native::Impl::Draw(
 	const SDL_Rect* p_viewport
 )
 {
+	CpuTimer timer(stats ? &drawNs : nullptr);
 	if (!p_vertices || !p_vertexCount || (p_indices && !p_indexCount) ||
 		p_vertexCount > std::numeric_limits<UINT>::max() / sizeof(MiniwinD3D11Vertex) ||
 		p_indexCount > std::numeric_limits<UINT>::max() / sizeof(Uint16) || p_logicalW <= 0 || p_logicalH <= 0) {
@@ -649,8 +693,8 @@ bool MiniwinD3D11Native::Impl::Draw(
 	if (!pipeline ||
 		!Upload(vertices, p_vertices, p_vertexCount * sizeof(MiniwinD3D11Vertex), D3D11_BIND_VERTEX_BUFFER) ||
 		(p_indices && !Upload(indices, p_indices, p_indexCount * sizeof(Uint16), D3D11_BIND_INDEX_BUFFER)) ||
-		!Upload(vertexUniforms, &vu, sizeof(vu), D3D11_BIND_CONSTANT_BUFFER) ||
-		!Upload(fragmentUniforms, &fu, sizeof(fu), D3D11_BIND_CONSTANT_BUFFER)) {
+		!UploadUniform(vertexUniforms, vu, lastVertexUniforms, haveVertexUniforms) ||
+		!UploadUniform(fragmentUniforms, fu, lastFragmentUniforms, haveFragmentUniforms)) {
 		return false;
 	}
 	// Explicitly unbind scene sampling before making it a render target again.
@@ -691,6 +735,9 @@ bool MiniwinD3D11Native::Impl::Draw(
 	}
 	else {
 		context->Draw(p_vertexCount, 0);
+	}
+	if (stats) {
+		drawCount++;
 	}
 	return true;
 }
@@ -736,8 +783,50 @@ bool MiniwinD3D11Native::Composite(const SDL_Rect& p_viewport)
 
 void MiniwinD3D11Native::Present()
 {
-	if (!Checked(m_impl->swapchain->Present(1, 0), "Present")) {
-		Checked(m_impl->device->GetDeviceRemovedReason(), "GetDeviceRemovedReason");
+	Impl& d = *m_impl;
+	{
+		CpuTimer timer(d.stats ? &d.presentNs : nullptr);
+		if (!Checked(d.swapchain->Present(1, 0), "Present")) {
+			Checked(d.device->GetDeviceRemovedReason(), "GetDeviceRemovedReason");
+		}
+	}
+	if (!d.stats) {
+		return;
+	}
+	Uint64 now = SDL_GetTicksNS();
+	if (!d.statsStart) {
+		d.statsStart = now;
+	}
+	if (d.lastPresent) {
+		Uint64 interval = now - d.lastPresent;
+		d.intervalTotal += interval;
+		d.intervalWorst = SDL_max(d.intervalWorst, interval);
+		d.intervalCount++;
+	}
+	d.lastPresent = now;
+	d.frameCount++;
+	if (now - d.statsStart >= 5000000000ull) {
+		double frames = (double) d.frameCount;
+		double millisecondsPerFrame = 1.0 / (frames * 1000000.0);
+		SDL_LogInfo(
+			LOG_CATEGORY_MINIWIN,
+			"D3D11 CPU stats (scene %dx%d): %.1f FPS, frame mean/worst %.2f/%.2f ms, "
+			"draws/frame %.1f, buffer uploads/frame %.1f, upload %.2f ms/frame, "
+			"draw submission (includes upload) %.2f ms/frame, Present wait %.2f ms/frame",
+			d.sceneW,
+			d.sceneH,
+			d.intervalCount * 1000000000.0 / (double) d.intervalTotal,
+			d.intervalTotal / ((double) d.intervalCount * 1000000.0),
+			d.intervalWorst / 1000000.0,
+			d.drawCount / frames,
+			d.uploadCount / frames,
+			d.uploadNs * millisecondsPerFrame,
+			d.drawNs * millisecondsPerFrame,
+			d.presentNs * millisecondsPerFrame
+		);
+		d.statsStart = now;
+		d.frameCount = d.intervalCount = d.intervalTotal = d.intervalWorst = 0;
+		d.drawCount = d.uploadCount = d.uploadNs = d.drawNs = d.presentNs = 0;
 	}
 }
 

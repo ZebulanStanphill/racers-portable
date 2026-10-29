@@ -15,6 +15,9 @@ a configuration error (`RACERS_D3D11_FXC_BIN` can specify its path).
 The hardware device requests 11.1, 11.0, 10.1, and 10.0, retrying without 11.1 on
 `E_INVALIDARG`. No compute, UAV, or constant-buffer offset features are used.
 Constant, vertex, and index data use dynamic buffers with `WRITE_DISCARD`.
+Constant buffers are uploaded only when their fully initialized contents change;
+only successful uploads update the cache, including logical-size changes for the
+scene composite and touch overlay.
 
 All immediate-context calls, resource updates, draws, resize operations and
 `Present(1, 0)` run on the game thread. Device creation also runs there, except
@@ -53,3 +56,15 @@ hardware testing. Compare intro video, menus, races, mipmaps, culling, overlays,
 resize and `RACERS_DUMP_*` captures with SDL_GPU on a Windows PC. Device removal
 is logged; automatic device-loss recovery is not implemented (matching the
 existing backend's lifetime model).
+
+CPU diagnostics are enabled automatically in UWP builds (and appear in the Xbox
+latest log); other Windows builds opt in with `RACERS_GL_STATS=1`. Every five
+seconds, one `D3D11 CPU stats` line reports presentation FPS, mean/worst intervals
+between completed presents, successful draws and buffer uploads per frame,
+buffer-upload CPU time, draw-submission CPU time, and time inside `Present`.
+Draw-submission time includes the upload subset, so these values must not be
+added together. Counts include the scene composite and touch overlay. These are
+CPU timings, not GPU execution measurements; intervals include simulation,
+limiting, rendering and present waits. No per-draw clocks run when diagnostics
+are disabled. Compare `--resolution native` and `--resolution original` on the
+same circuit to help separate pixel workload from CPU submission overhead.
