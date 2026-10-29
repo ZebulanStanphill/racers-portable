@@ -128,6 +128,12 @@ void MenuInputHandler::MapAllJoystickButtons()
 			for (LegoS32 j = 0; j < joystick->GetButtonCountFast(); j++) {
 				// [library:input] The gamepad's B goes back instead of selecting.
 				m_unk0x004[j] = j == MINIWIN_GAMEPAD_BUTTON_B ? MINIWIN_GAMEPAD_MENU_BACK : 4;
+#ifdef WINDOWS_STORE
+				// Preserve Menu so the dispatcher can treat it as Back during OSK entry.
+				if (j == MINIWIN_GAMEPAD_BUTTON_MENU) {
+					m_unk0x004[j] = MINIWIN_GAMEPAD_BUTTON_MENU;
+				}
+#endif
 			}
 
 			joystick->SetEventMappings(m_unk0x004, NULL);

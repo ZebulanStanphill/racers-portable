@@ -11,8 +11,16 @@
 #include "render/goldrawstate.h"
 
 #include <memory.h>
+#include <miniwin/gamepad.h>
 #include <miniwin/miniwinapp.h>
 #include <miniwin/touch.h>
+
+#ifdef WINDOWS_STORE
+#include <unordered_set>
+
+// [library:input] Keep the Menu press that dismisses text entry consumed until release.
+static std::unordered_set<InputDevice*> g_textEntryMenuButtons;
+#endif
 
 DECOMP_SIZE_ASSERT(MenuInputDispatcher, 0x60)
 DECOMP_SIZE_ASSERT(MenuInputDispatcher::Cursor::InitStruct, 0x24)
@@ -39,6 +47,9 @@ MenuInputDispatcher::~MenuInputDispatcher()
 // FUNCTION: LEGORACERS 0x00468f80
 LegoS32 MenuInputDispatcher::Reset()
 {
+#ifdef WINDOWS_STORE
+	g_textEntryMenuButtons.clear();
+#endif
 	m_inputManager = NULL;
 	m_inputEvents = NULL;
 	m_activeScreen = NULL;
@@ -206,6 +217,27 @@ LegoS32 MenuInputDispatcher::ProcessInputEvents(MenuIcon*)
 
 	while (m_inputEvents->GetSize()) {
 		item = m_inputEvents->Dequeue();
+#ifdef WINDOWS_STORE
+		// [library:input] Menu dismisses the OSK just like B. Outside text entry it
+		// retains the existing select action. Keep its release mapped to Back too,
+		// even if text entry ends before release, and suppress held repeats.
+		if (item->m_keyCode == (InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_BUTTON_MENU)) {
+			if (g_textEntryMenuButtons.count(item->m_device)) {
+				if (item->m_isPressed) {
+					continue;
+				}
+				g_textEntryMenuButtons.erase(item->m_device);
+				item->m_keyCode = InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_MENU_BACK;
+			}
+			else if (item->m_isPressed && !item->m_isRepeat && MiniwinTouch_TextInputActive()) {
+				g_textEntryMenuButtons.insert(item->m_device);
+				item->m_keyCode = InputDevice::c_sourceJoystickButton | MINIWIN_GAMEPAD_MENU_BACK;
+			}
+			else {
+				item->m_keyCode = InputDevice::c_sourceJoystickButton | 4;
+			}
+		}
+#endif
 		if (DispatchMouseButtonEvent(item)) {
 			break;
 		}
