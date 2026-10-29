@@ -68,3 +68,17 @@ CPU timings, not GPU execution measurements; intervals include simulation,
 limiting, rendering and present waits. No per-draw clocks run when diagnostics
 are disabled. Compare `--resolution native` and `--resolution original` on the
 same circuit to help separate pixel workload from CPU submission overhead.
+
+Race sessions also emit a five-second `Race CPU stats` line on UWP (or with
+`RACERS_GL_STATS` on desktop), regardless of the renderer. Samples reset after
+loading and whenever the race state, pause state or racer count changes. The
+line identifies those values, reports FPS and mean/worst measured frame CPU
+elapsed time, and separates Tick (including the limiter), state/input dispatch,
+Update, Draw and PresentFrame. Sound-manager and racer-step times are nested
+subsets of Update, not additional time; racer steps include physics, collisions,
+animation, engine/spatial sound updates and standings for every racer. The step
+count per frame shows when elapsed time requires multiple 40 ms simulation
+steps. Compare solo and circuit samples in racing state 3 with pause off: high
+racer-step time points to simulation rather than visibility, high sound-manager
+time narrows the audio investigation, and Draw/PresentFrame can be compared with
+the D3D11 CPU line. Measurements do not change the simulation timestep.

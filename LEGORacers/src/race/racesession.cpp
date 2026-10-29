@@ -36,6 +36,7 @@
 
 #include <memory.h>
 #include <miniwin/gamepad.h>
+#include <miniwin/raceprofile.h>
 #include <miniwin/touch.h>
 #include <miniwin/widescreen.h>
 #include <mmsystem.h>
@@ -398,11 +399,18 @@ void RaceSession::Run()
 	m_state = 1;
 	m_renderer->VTable0x44();
 
+	// [library:profiling] Exclude loading; reset samples on race state/pause changes.
+	MiniwinRaceProfile_Reset();
 	while (m_running) {
+		MiniwinRaceProfile_BeginFrame(m_state, m_pauseState != 0, m_raceState.GetRacerCount());
+		MiniwinRaceProfile_Begin(MINIWIN_RACE_TICK);
 		if (!m_golApp->Tick(this)) {
 			break;
 		}
 
+		// [library:profiling] State/input includes dispatch and the race-state update.
+		MiniwinRaceProfile_End(MINIWIN_RACE_TICK);
+		MiniwinRaceProfile_Begin(MINIWIN_RACE_STATE);
 		if (m_golApp->GetFlags() & GolApp::c_flagBit14) {
 			m_pauseState = 1;
 			OpenPauseDialog();
@@ -442,9 +450,18 @@ void RaceSession::Run()
 				break;
 			}
 
+			// [library:profiling] These CPU phases include their nested backend work.
+			MiniwinRaceProfile_End(MINIWIN_RACE_STATE);
+			MiniwinRaceProfile_Begin(MINIWIN_RACE_UPDATE);
 			Update();
+			MiniwinRaceProfile_End(MINIWIN_RACE_UPDATE);
+			MiniwinRaceProfile_Begin(MINIWIN_RACE_DRAW);
 			Draw();
+			MiniwinRaceProfile_End(MINIWIN_RACE_DRAW);
+			MiniwinRaceProfile_Begin(MINIWIN_RACE_PRESENT);
 			m_golApp->PresentFrame();
+			MiniwinRaceProfile_End(MINIWIN_RACE_PRESENT);
+			MiniwinRaceProfile_EndFrame();
 
 			if (m_frameCount) {
 				LegoS32 currentTime = timeGetTime();
@@ -462,6 +479,10 @@ void RaceSession::Run()
 			}
 
 			m_frameCount++;
+		}
+		else {
+			// [library:profiling] Background time must not enter the next race sample.
+			MiniwinRaceProfile_Reset();
 		}
 	}
 
@@ -2067,7 +2088,10 @@ void RaceSession::Update()
 		m_hazardManager.Update(elapsedMs);
 		m_timers.Update(elapsedMs);
 		m_animationList.Update(elapsedMs);
+		// [library:profiling] Nested subset of the frame's Update CPU time.
+		MiniwinRaceProfile_Begin(MINIWIN_RACE_SOUND);
 		m_soundManager->Update(elapsedMs);
+		MiniwinRaceProfile_End(MINIWIN_RACE_SOUND);
 
 		LegoU32 i;
 		if (!m_demoMode) {
@@ -2091,7 +2115,10 @@ void RaceSession::Update()
 				remainingMs = 0;
 			}
 
+			// [library:profiling] Count actual simulation steps without changing them.
+			MiniwinRaceProfile_Begin(MINIWIN_RACE_RACERS);
 			m_raceState.UpdateRacers(stepMs);
+			MiniwinRaceProfile_End(MINIWIN_RACE_RACERS);
 
 			for (i = 0; i < m_context->m_playerCount; i++) {
 				m_cameraControllers[i].Update(static_cast<LegoFloat>(stepMs));
