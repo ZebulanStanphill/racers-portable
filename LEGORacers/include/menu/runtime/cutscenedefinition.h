@@ -296,6 +296,11 @@ public:
 		void RemoveLight(const GolRenderDevice::Light* p_light);
 		void ResolveEntities();
 		GolCamera* GetActiveCamera();
+		// [library:3d] Match Draw's lens selection for a temporary widescreen projection.
+		GolCamera* GetViewportCamera(LegoU32 p_lensIndex) const
+		{
+			return m_cameraCount ? m_cameraStack[p_lensIndex < m_cameraCount ? p_lensIndex : m_cameraCount - 1] : NULL;
+		}
 
 		LegoU32 GetFlags() const { return m_flags; }
 		LegoU32 GetCurrentFrame() const { return m_currentFrame; }

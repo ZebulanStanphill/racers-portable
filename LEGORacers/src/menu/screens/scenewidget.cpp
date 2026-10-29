@@ -1,9 +1,12 @@
 #include "audio/soundgroupbinding.h"
+#include "camera/golcamera.h"
 #include "golerror.h"
 #include "input/inputdevice.h"
 #include "menu/screens/menuscenescreen.h"
 #include "render/gold3drenderdevice.h"
 #include "surface/golrendertarget.h"
+
+#include <miniwin/widescreen.h>
 
 DECOMP_SIZE_ASSERT(MenuSceneScreen::SceneWidget, 0x2d0)
 
@@ -164,9 +167,28 @@ MenuWidget* MenuSceneScreen::SceneWidget::DrawSelf(Rect*, Rect*)
 	}
 
 	m_renderer->EnableZBuffer();
+	// [library:3d] Full-screen cinematics widen like races. Embedded menu previews
+	// keep their UI layout; authored camera framing is restored after every draw.
+	const GolRenderTarget* renderTarget = m_renderer->GetRenderTargetInfo();
+	bool wide = MiniwinWidescreen_Active() && m_viewportRect.m_left == 0 && m_viewportRect.m_top == 0 &&
+				m_viewportRect.m_right == renderTarget->GetWidth() &&
+				m_viewportRect.m_bottom == renderTarget->GetHeight();
+	GolCamera* camera = wide ? m_frame->GetViewportCamera(0) : NULL;
+	LegoFloat aspect = camera ? camera->m_aspectRatio : 0.f;
+	if (camera) {
+		camera->SetAspectRatio(aspect * MiniwinWidescreen_RaceAspect(false) / (4.f / 3.f));
+	}
+	MiniwinWorldScope world;
+	if (!wide) {
+		world.End();
+	}
 	m_frame->Draw(m_renderer, 0);
 	m_player.Draw(m_renderer);
 	m_player.DrawTransparent(m_renderer);
+	world.End();
+	if (camera) {
+		camera->SetAspectRatio(aspect);
+	}
 	m_player.DrawOverlay(m_renderer);
 	m_renderer->SelectViewport(0);
 	m_renderer->DisableZBuffer(0);

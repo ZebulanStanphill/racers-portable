@@ -11,12 +11,12 @@ next frame without a relaunch. Widescreen overrides `--scale stretch`.
 The game keeps submitting pre-transformed vertices in a 640x480 logical space. Each
 draw is tagged when it is submitted:
 
-- **UI** (the default): menus, loading screens, movies, cutscenes, the pause menu
+- **UI** (the default): menus, loading screens, movies, cutscene text, the pause menu
   and the race HUD. `MiniwinRenderBackend::SubmitTriangles` maps logical x into a
   centred 4:3 region of the wide scene (`UIWidthFraction()`, offset
   `(1 - fraction) * 640 / 2`); y is untouched. Aspect, fonts and the sample lattice
   are exactly those of a 4:3 window of the same height.
-- **World**: the race scene and full-screen fades. A `MiniwinWorldScope` in
+- **World**: the race scene, full-screen rendered cutscenes and full-screen fades. A `MiniwinWorldScope` in
   `RaceSession::Draw` (and in `DrawFullWidthFades` for the fade quads) leaves
   logical x untouched, so 0..640 spans the whole wide scene.
 
@@ -58,7 +58,11 @@ scale mode and render resolution are not shared this way yet.
 in Versus (each half is 640x240). The vertical field of view (including the Versus
 -25 degrees and per-frame FOV animation) is untouched, so framing is unchanged and
 `GolCameraBase::ComputeFrustum` widens with the projection: culling matches the view
-and nothing pops in at the side edges. Menu and cutscene cameras are not touched.
+and nothing pops in at the side edges. Full-screen `SceneWidget` cinematics also
+widen their camera aspect during drawing, then restore it. Their 3D content spans
+the window while text and overlays keep the centred UI layout. Embedded menu
+previews and prerecorded AVI movies retain their original framing. Authored
+cutscenes can reveal content beyond the original 4:3 composition.
 
 ## Input
 
